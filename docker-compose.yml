@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  governance:
+    container_name: governance
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - ${GOVERNANCE_HTTP_PORT}:${GOVERNANCE_HTTP_PORT}
+    env_file:
+      - .env
+    command: ["/root/governance"]
