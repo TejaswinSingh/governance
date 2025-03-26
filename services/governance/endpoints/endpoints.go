@@ -2,7 +2,6 @@ package endpoints
 
 import (
 	"context"
-	"errors"
 	"os"
 
 	"github.com/TejaswinSingh/version0/services/governance"
@@ -12,11 +11,13 @@ import (
 
 type Set struct {
 	ServiceStatusEndpoint endpoint.Endpoint
+	LoginEndpoint         endpoint.Endpoint
 }
 
 func NewEndpointSet(svc governance.Service) Set {
 	return Set{
 		ServiceStatusEndpoint: MakeServiceStatusEndpoint(svc),
+		LoginEndpoint:         MakeLoginEndpoint(svc),
 	}
 }
 
@@ -25,23 +26,34 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 		_ = request.(ServiceStatusRequest)
 		code, err := svc.ServiceStatus(ctx)
 		if err != nil {
-			return ServiceStatusResponse{Code: code, Err: err.Error()}, nil
+			return err, nil
 		}
-		return ServiceStatusResponse{Code: code, Err: ""}, nil
+		return ServiceStatusResponse{Code: code, Err: nil}, nil
 	}
 }
 
-func (s *Set) ServiceStatus(ctx context.Context) (int, error) {
-	resp, err := s.ServiceStatusEndpoint(ctx, ServiceStatusRequest{})
-	svcStatusResp := resp.(ServiceStatusResponse)
-	if err != nil {
-		return svcStatusResp.Code, err
+func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(LoginRequest)
+		token, err := svc.Login(ctx, req.Username, req.Password)
+		if err != nil {
+			return err, nil
+		}
+		return LoginResponse{Token: token, Err: nil}, nil
 	}
-	if svcStatusResp.Err != "" {
-		return svcStatusResp.Code, errors.New(svcStatusResp.Err)
-	}
-	return svcStatusResp.Code, nil
 }
+
+// func (s *Set) ServiceStatus(ctx context.Context) (int, error) {
+// 	resp, err := s.ServiceStatusEndpoint(ctx, ServiceStatusRequest{})
+// 	svcStatusResp := resp.(ServiceStatusResponse)
+// 	if err != nil {
+// 		return svcStatusResp.Code, err
+// 	}
+// 	if svcStatusResp.Err != "" {
+// 		return svcStatusResp.Code, errors.New(svcStatusResp.Err)
+// 	}
+// 	return svcStatusResp.Code, nil
+// }
 
 var logger log.Logger
 

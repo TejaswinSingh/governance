@@ -5,6 +5,7 @@ go 1.22
 require (
 	github.com/go-kit/kit v0.13.0
 	github.com/go-kit/log v0.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/oklog/oklog v0.3.2
 )
 

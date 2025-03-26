@@ -23,16 +23,22 @@ func main() {
 	var (
 		logger log.Logger
 		// httpAddr = net.JoinHostPort("localhost", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
-		httpAddr = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
+		httpAddr  = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
+		secretKey = envString("SECRET_KEY", "")
 	)
 
 	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
 	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 
+	if secretKey == "" {
+		logger.Log("exit", "secret key is not set")
+		os.Exit(1)
+	}
+
 	var (
-		service     = governance.NewService()
+		service     = governance.NewService(secretKey)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps)
+		httpHandler = transport.NewHTTPHandler(eps, secretKey)
 	)
 
 	var g group.Group
