@@ -20,3 +20,9 @@ type LoginResponse struct {
 	Token string               `json:"-"`
 	Err   *errors.ServiceError `json:"err,omitempty"`
 }
+
+type LogoutRequest struct{}
+
+type LogoutResponse struct {
+	Err *errors.ServiceError `json:"err,omitempty"`
+}

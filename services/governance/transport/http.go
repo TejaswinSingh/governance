@@ -9,14 +9,15 @@ import (
 
 	"github.com/TejaswinSingh/version0/services/governance/endpoints"
 	governanceErrors "github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/TejaswinSingh/version0/services/governance/redis"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
 )
 
-func NewHTTPHandler(ep endpoints.Set, secretKey string) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.RedisService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", AllowMethods(JWTAuthMiddleware(secretKey, httptransport.NewServer(
+	m.Handle("/governance/healthz", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
@@ -28,6 +29,13 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string) http.Handler {
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // errors occured while decoding will be passed to this
 	), "POST"))
+
+	m.Handle("/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+		ep.LogoutEndpoint,
+		decodeHTTPLogoutRequest,
+		encodeResponse,
+		httptransport.ServerErrorEncoder(encodeError),
+	)), "POST"))
 
 	return m
 }
@@ -45,6 +53,11 @@ func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (any, error) {
 	if err != nil {
 		return nil, governanceErrors.ErrBadRequest
 	}
+	return req, nil
+}
+
+func decodeHTTPLogoutRequest(_ context.Context, r *http.Request) (any, error) {
+	var req endpoints.LogoutRequest
 	return req, nil
 }
 

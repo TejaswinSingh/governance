@@ -10,4 +10,26 @@ services:
       - ${GOVERNANCE_HTTP_PORT}:${GOVERNANCE_HTTP_PORT}
     env_file:
       - .env
+    depends_on:
+      - redis
+    networks:
+      - governance_network
     command: ["/root/governance"]
+
+  redis:
+    image: "redis:7.4"
+    container_name: redis
+    ports:
+      - ${REDIS_PORT}:${REDIS_PORT}
+    volumes:
+      - redis_data:/data
+    networks:
+      - governance_network
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+
+volumes:
+  redis_data:
+
+networks:
+  governance_network:
+    driver: bridge

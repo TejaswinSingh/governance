@@ -12,12 +12,14 @@ import (
 type Set struct {
 	ServiceStatusEndpoint endpoint.Endpoint
 	LoginEndpoint         endpoint.Endpoint
+	LogoutEndpoint        endpoint.Endpoint
 }
 
 func NewEndpointSet(svc governance.Service) Set {
 	return Set{
 		ServiceStatusEndpoint: MakeServiceStatusEndpoint(svc),
 		LoginEndpoint:         MakeLoginEndpoint(svc),
+		LogoutEndpoint:        MakeLogoutEndpoint(svc),
 	}
 }
 
@@ -40,6 +42,17 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 			return err, nil
 		}
 		return LoginResponse{Token: token, Err: nil}, nil
+	}
+}
+
+func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		_ = request.(LogoutRequest)
+		err := svc.Logout(ctx)
+		if err != nil {
+			return err, nil
+		}
+		return LogoutResponse{Err: nil}, nil
 	}
 }
 
