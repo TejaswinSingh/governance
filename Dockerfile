@@ -10,7 +10,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 go build -o /app/bin/governance ./cmd/governance/
 
-FROM alpine:latest
+FROM alpine:3.21.3
 WORKDIR /root/
 
 COPY --from=builder /app/bin/* /root/
