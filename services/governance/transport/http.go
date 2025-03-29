@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/TejaswinSingh/version0/services/governance/endpoints"
 	governanceErrors "github.com/TejaswinSingh/version0/services/governance/errors"
@@ -23,16 +24,23 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.Redi
 		encodeResponse,
 	)), "GET"))
 
-	m.Handle("/login", AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // errors occured while decoding will be passed to this
 	), "POST"))
 
-	m.Handle("/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+	m.Handle("/auth/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
+		encodeResponse,
+		httptransport.ServerErrorEncoder(encodeError),
+	)), "POST"))
+
+	m.Handle("/auth/refresh", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+		ep.RefreshEndpoint,
+		decodeHTTPRefreshRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST"))
@@ -61,6 +69,11 @@ func decodeHTTPLogoutRequest(_ context.Context, r *http.Request) (any, error) {
 	return req, nil
 }
 
+func decodeHTTPRefreshRequest(_ context.Context, r *http.Request) (any, error) {
+	var req endpoints.RefreshRequest
+	return req, nil
+}
+
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) error {
 	if e, ok := response.(error); ok && e != nil {
 		encodeError(ctx, e, w)
@@ -69,10 +82,39 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	// set JWT in header for LoginResponse
-	if loginResponse, ok := response.(endpoints.LoginResponse); ok {
-		w.Header().Set("Authorization", "Bearer "+loginResponse.Token)
-		w.WriteHeader(http.StatusOK) // header must be set before a call to WriteHeader
+	// set access-token in header and refresh-token as cookie
+	// for LoginResponse & RefreshResponse
+	if resp, ok := response.(interface {
+		GetAccessToken() string
+		GetRefreshToken() string
+	}); ok {
+		w.Header().Set("Authorization", "Bearer "+resp.GetAccessToken())
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    resp.GetRefreshToken(),
+			HttpOnly: true, // prevents JavaScript access
+			// Secure:   true, // HTTPS
+			SameSite: http.SameSiteStrictMode,
+			Path:     "/auth/",
+		})
+		w.WriteHeader(http.StatusOK)
+		logger.Log("Response", response)
+		return nil
+	}
+
+	// Remove the refresh-token cookie for LogoutResponse
+	if _, ok := response.(endpoints.LogoutResponse); ok {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "refresh_token",
+			Value:    "",
+			HttpOnly: true,
+			// Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+			Path:     "/auth/",
+			MaxAge:   -1,              // Marks cookie for immediate removal
+			Expires:  time.Unix(0, 0), // Expire immediately
+		})
+		w.WriteHeader(http.StatusOK)
 		logger.Log("Response", response)
 		return nil
 	}

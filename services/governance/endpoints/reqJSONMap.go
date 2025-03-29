@@ -17,12 +17,27 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string               `json:"-"`
-	Err   *errors.ServiceError `json:"err,omitempty"`
+	TokenAccess  string               `json:"-"`
+	TokenRefresh string               `json:"-"`
+	Err          *errors.ServiceError `json:"err,omitempty"`
 }
+
+func (l LoginResponse) GetAccessToken() string  { return l.TokenAccess }
+func (l LoginResponse) GetRefreshToken() string { return l.TokenRefresh }
 
 type LogoutRequest struct{}
 
 type LogoutResponse struct {
 	Err *errors.ServiceError `json:"err,omitempty"`
 }
+
+type RefreshRequest struct{}
+
+type RefreshResponse struct {
+	TokenAccess  string               `json:"-"`
+	TokenRefresh string               `json:"-"`
+	Err          *errors.ServiceError `json:"err,omitempty"`
+}
+
+func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }
+func (r RefreshResponse) GetRefreshToken() string { return r.TokenRefresh }

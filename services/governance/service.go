@@ -4,17 +4,21 @@ import (
 	"context"
 
 	"github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-type contextKey string
+type ContextKey string
 
 const (
-	ClaimsKey contextKey = "claims"
-	TokenKey  contextKey = "token"
+	AccessClaimsKey  ContextKey = "access-claims"
+	RefreshClaimsKey ContextKey = "refresh-claims"
+	AccessTokenKey   ContextKey = "access-token"
+	RefreshTokenKey  ContextKey = "refresh-token"
 )
 
 type Service interface {
 	ServiceStatus(ctx context.Context) (int, *errors.ServiceError)
-	Login(ctx context.Context, username, password string) (string, *errors.ServiceError)
-	Logout(ctx context.Context) *errors.ServiceError
+	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, err *errors.ServiceError)
+	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) *errors.ServiceError
+	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, err *errors.ServiceError)
 }

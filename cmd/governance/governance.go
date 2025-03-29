@@ -27,39 +27,22 @@ const (
 )
 
 func main() {
+	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+
 	var (
-		logger log.Logger
 		// httpAddr = net.JoinHostPort("localhost", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
 		httpAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
-		secretKey      = envString("SECRET_KEY", "")
+		secretKey      = requireEnv("SECRET_KEY", logger)
 		redisHost      = envString("REDIS_HOST", defaultRedisHost)
 		redisPort      = envString("REDIS_PORT", defaultRedisPort)
-		reddisPassword = envString("REDIS_PASSWORD", "")
+		reddisPassword = requireEnv("REDIS_PASSWORD", logger)
 		redisDatabase  = envString("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
 	)
 
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-
-	if secretKey == "" {
-		logger.Log("exit", "SECRET_KEY is not set")
-		os.Exit(1)
-	}
-	if redisHost == "" {
-		logger.Log("exit", "REDIS_HOST is not set")
-		os.Exit(1)
-	}
-	if redisPort == "" {
-		logger.Log("exit", "REDIS_PORT is not set")
-		os.Exit(1)
-	}
-	if reddisPassword == "" {
-		logger.Log("exit", "REDIS_PASSWORD is not set")
-		os.Exit(1)
-	}
 	redisDB, err := strconv.Atoi(redisDatabase)
-	if err != nil {
-		logger.Log("exit", "REDIS_DATABASE_GOVERNANCE is not set correctly")
+	if err != nil || redisDB < 0 || redisDB > 15 {
+		logger.Log("exit", "REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15")
 		os.Exit(1)
 	}
 
@@ -134,9 +117,18 @@ func main() {
 }
 
 func envString(env, fallback string) string {
-	e := os.Getenv(env)
-	if e == "" {
+	e, ok := os.LookupEnv(env)
+	if e == "" || !ok {
 		return fallback
+	}
+	return e
+}
+
+func requireEnv(env string, logger log.Logger) string {
+	e, ok := os.LookupEnv(env)
+	if e == "" || !ok {
+		logger.Log("exit", fmt.Sprintf("%s is not set", env))
+		os.Exit(1)
 	}
 	return e
 }
