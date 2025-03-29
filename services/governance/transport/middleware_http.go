@@ -8,41 +8,8 @@ import (
 	"github.com/TejaswinSingh/version0/services/governance/auth"
 	"github.com/TejaswinSingh/version0/services/governance/errors"
 	myredis "github.com/TejaswinSingh/version0/services/governance/redis"
+	"github.com/golang-jwt/jwt/v5"
 )
-
-func JWTAuthMiddleware(secretKey string, redisService *myredis.RedisService, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			encodeError(r.Context(), errors.ErrUnauthorized, w)
-			return
-		}
-
-		// verify token
-		tokenString := auth.ExtractToken(authHeader)
-		claims, err := auth.VerifyToken(tokenString, secretKey)
-		if err != nil {
-			encodeError(r.Context(), err, w)
-			return
-		}
-
-		// check that token is not blacklisted
-		val, err := redisService.Get(r.Context(), tokenString)
-		if err != nil && err != errors.ErrRedisKeyNotExist {
-			encodeError(r.Context(), err, w)
-			return
-		}
-		if err == nil && val == "blacklisted" {
-			encodeError(r.Context(), errors.ErrInvalidToken, w)
-			return
-		}
-
-		// Store claims and token in context and proceed
-		ctx := context.WithValue(r.Context(), governance.ClaimsKey, claims)
-		ctx = context.WithValue(ctx, governance.TokenKey, tokenString)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
 
 func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,4 +23,94 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func JWTAuthMiddleware(secretKey string, redisService *myredis.RedisService, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		switch r.URL.Path {
+		case "/auth/refresh":
+			// get refresh-token
+			token, err := getTokenFromCookie(r, "refresh_token")
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			tokenType := "refresh"
+			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			r = setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token)
+
+		case "/auth/logout":
+			// get refresh-token
+			token, err := getTokenFromCookie(r, "refresh_token")
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			tokenType := "refresh"
+			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			r = setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token)
+			// get access-token
+			token, err = getTokenFromHeader(r)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			tokenType = "access"
+			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			r = setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token)
+
+		default:
+			// get access-token
+			token, err := getTokenFromHeader(r)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			tokenType := "access"
+			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			r = setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token)
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// helpers
+func getTokenFromCookie(r *http.Request, cookieName string) (string, *errors.ServiceError) {
+	cookie, err := r.Cookie(cookieName)
+	if err != nil && cookieName == "refresh_token" {
+		return "", errors.ErrNoRefreshCookie
+	}
+	return cookie.Value, nil
+}
+
+func getTokenFromHeader(r *http.Request) (string, *errors.ServiceError) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return "", errors.ErrUnauthorized
+	}
+	return auth.ExtractToken(authHeader), nil
+}
+
+func setContext(r *http.Request, claimsKey governance.ContextKey, claimsValue jwt.MapClaims, tokenKey governance.ContextKey, tokenValue string) *http.Request {
+	ctx := context.WithValue(r.Context(), claimsKey, claimsValue)
+	ctx = context.WithValue(ctx, tokenKey, tokenValue)
+	return r.WithContext(ctx)
 }

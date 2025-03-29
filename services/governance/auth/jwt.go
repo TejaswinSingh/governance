@@ -1,22 +1,36 @@
 package auth
 
 import (
+	"context"
 	"os"
 	"time"
 
 	"github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/TejaswinSingh/version0/services/governance/redis"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func CreateToken(username, secretKey string) (string, *errors.ServiceError) {
+const (
+	accessTokenExpiry  = time.Hour * 1       // 1 hour
+	refreshTokenExpiry = time.Hour * 24 * 15 // 15 days
+)
+
+func CreateToken(username, secretKey, tokenType string) (string, *errors.ServiceError) {
+	var exp time.Duration
+	if tokenType == "access" {
+		exp = accessTokenExpiry
+	} else { // refresh
+		exp = refreshTokenExpiry
+	}
 	now := time.Now()
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": username,                  // Subject (user identifier)
-		"iss": "governance-service",      // Issuer
-		"aud": getRole(username),         // Audience (user role)
-		"exp": now.Add(time.Hour).Unix(), // Expiration time
-		"iat": now.Unix(),                // Issued at
+		"type": tokenType,            // Type of token
+		"sub":  username,             // Subject (user identifier)
+		"iss":  "governance-service", // Issuer
+		"aud":  getRole(username),    // Audience (user role)
+		"exp":  now.Add(exp).Unix(),  // Expiration time
+		"iat":  now.Unix(),           // Issued at
 	})
 
 	tokenString, err := claims.SignedString([]byte(secretKey))
@@ -34,7 +48,12 @@ func ExtractToken(authHeader string) string {
 	return authHeader
 }
 
-func VerifyToken(tokenString, secretKey string) (jwt.MapClaims, *errors.ServiceError) {
+func VerifyToken(ctx context.Context, redisService *redis.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, *errors.ServiceError) {
+	if tokenString == "" {
+		return nil, errors.ErrInvalidToken
+	}
+
+	// validate signing method
 	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.ErrInvalidSignMethod
@@ -51,16 +70,50 @@ func VerifyToken(tokenString, secretKey string) (jwt.MapClaims, *errors.ServiceE
 		return nil, errors.ErrInvalidClaims
 	}
 
+	// validate token expiration
 	expTime, ok := claims["exp"].(float64) // JWT stores exp as float64
 	if !ok {
 		return nil, errors.ErrInvalidClaims
 	}
-	// token expired
 	if time.Now().Unix() > int64(expTime) {
 		return nil, errors.ErrInvalidToken
 	}
 
+	// validate token type
+	tokenTypeClaim, ok := claims["type"].(string)
+	if !ok || tokenTypeClaim != tokenType {
+		return nil, errors.ErrInvalidClaims
+	}
+
+	// validate token subject
+	username, ok := claims["sub"].(string)
+	if !ok || username == "" {
+		return nil, errors.ErrInvalidClaims
+	}
+
+	// validate that token is not blacklisted
+	val, err_ := redisService.Get(ctx, tokenString)
+	if err_ != nil && err_ != errors.ErrRedisKeyNotExist {
+		return nil, err_
+	}
+	if err_ == nil && val == "blacklisted" {
+		return nil, errors.ErrInvalidToken
+	}
+
 	return claims, nil
+}
+
+func BlacklistToken(ctx context.Context, redisService *redis.RedisService, token string, claims jwt.MapClaims) *errors.ServiceError {
+	expTime, ok := claims["exp"].(float64)
+	if !ok {
+		return errors.ErrInvalidClaims
+	}
+	expirationDuration := time.Until(time.Unix(int64(expTime), 0))
+	err := redisService.Set(ctx, token, "blacklisted", expirationDuration)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func getRole(username string) string {

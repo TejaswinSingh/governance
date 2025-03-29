@@ -7,12 +7,14 @@ import (
 	"github.com/TejaswinSingh/version0/services/governance"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/log"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Set struct {
 	ServiceStatusEndpoint endpoint.Endpoint
 	LoginEndpoint         endpoint.Endpoint
 	LogoutEndpoint        endpoint.Endpoint
+	RefreshEndpoint       endpoint.Endpoint
 }
 
 func NewEndpointSet(svc governance.Service) Set {
@@ -20,6 +22,7 @@ func NewEndpointSet(svc governance.Service) Set {
 		ServiceStatusEndpoint: MakeServiceStatusEndpoint(svc),
 		LoginEndpoint:         MakeLoginEndpoint(svc),
 		LogoutEndpoint:        MakeLogoutEndpoint(svc),
+		RefreshEndpoint:       MakeRefreshEndpoint(svc),
 	}
 }
 
@@ -37,22 +40,46 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(LoginRequest)
-		token, err := svc.Login(ctx, req.Username, req.Password)
+		tokenAccess, tokenRefresh, err := svc.Login(ctx, req.Username, req.Password)
 		if err != nil {
 			return err, nil
 		}
-		return LoginResponse{Token: token, Err: nil}, nil
+		return LoginResponse{
+			TokenAccess:  tokenAccess,
+			TokenRefresh: tokenRefresh,
+			Err:          nil}, nil
 	}
 }
 
 func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		_ = request.(LogoutRequest)
-		err := svc.Logout(ctx)
+		// get values extracted by the auth middleware
+		tokenAccess, _ := ctx.Value(governance.AccessTokenKey).(string)
+		tokenRefresh, _ := ctx.Value(governance.RefreshTokenKey).(string)
+		accessClaims, _ := ctx.Value(governance.AccessClaimsKey).(jwt.MapClaims)
+		refreshClaims, _ := ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims)
+		err := svc.Logout(ctx, tokenAccess, tokenRefresh, accessClaims, refreshClaims)
 		if err != nil {
 			return err, nil
 		}
 		return LogoutResponse{Err: nil}, nil
+	}
+}
+
+func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		_ = request.(RefreshRequest)
+		token, _ := ctx.Value(governance.RefreshTokenKey).(string)
+		claims, _ := ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims)
+		tokenAccess, tokenRefresh, err := svc.Refresh(ctx, token, claims)
+		if err != nil {
+			return err, nil
+		}
+		return RefreshResponse{
+			TokenAccess:  tokenAccess,
+			TokenRefresh: tokenRefresh,
+			Err:          nil}, nil
 	}
 }
 

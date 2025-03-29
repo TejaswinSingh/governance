@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/TejaswinSingh/version0/services/governance/auth"
 	"github.com/TejaswinSingh/version0/services/governance/errors"
@@ -26,50 +25,62 @@ func (s *governanceService) ServiceStatus(_ context.Context) (int, *errors.Servi
 	return http.StatusOK, nil
 }
 
-func (s *governanceService) Login(ctx context.Context, username, password string) (string, *errors.ServiceError) {
+func (s *governanceService) Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, err *errors.ServiceError) {
 	if username == "" || password == "" {
-		return "", errors.ErrMissingCreds
+		return "", "", errors.ErrMissingCreds
 	}
 	// TODO: implement proper credentials check
 	if username == "admin" && password == "admin" {
-		tokenString, err := auth.CreateToken(username, s.secretKey)
+		tokenAccess, err = auth.CreateToken(username, s.secretKey, "access")
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
-		return tokenString, nil
+		tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh")
+		if err != nil {
+			return "", "", err
+		}
+		return tokenAccess, tokenRefresh, nil
 	} else {
-		return "", errors.ErrInvalidCreds
+		return "", "", errors.ErrInvalidCreds
 	}
 }
 
-func (s *governanceService) Logout(ctx context.Context) *errors.ServiceError {
-	tokenString, ok := ctx.Value(TokenKey).(string)
-	if !ok || tokenString == "" { // JWT auth middleware makes sure this never happens
-		return nil
+func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) *errors.ServiceError {
+	// add the access-token to blacklist
+	err := auth.BlacklistToken(ctx, s.redisService, tokenAccess, claimsAccess)
+	if err != nil {
+		return err
 	}
 
-	claims, ok := ctx.Value(ClaimsKey).(jwt.MapClaims) // same for this
-	if !ok {
-		return nil
-	}
-
-	expTime, ok := claims["exp"].(float64)
-	if !ok {
-		return nil
-	}
-
-	expirationDuration := time.Until(time.Unix(int64(expTime), 0))
-	if expirationDuration <= 0 { // Token is already expired
-		return nil
-	}
-
-	// add tokenString(JWT) to blacklist
-	err := s.redisService.Set(ctx, tokenString, "blacklisted", expirationDuration)
+	// add the refresh-token to blacklist
+	err = auth.BlacklistToken(ctx, s.redisService, tokenRefresh, claimsRefresh)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string, claimsRefresh jwt.MapClaims) (tokenAccess, tokenRefresh string, err *errors.ServiceError) {
+	// add the current refresh-token to blacklist
+	err = auth.BlacklistToken(ctx, s.redisService, curTokenRefresh, claimsRefresh)
+	if err != nil {
+		return "", "", err
+	}
+
+	// TODO: blacklist all access tokens issued with this refresh token
+
+	// create new access and refresh tokens
+	username, _ := claimsRefresh["sub"].(string)
+	tokenAccess, err = auth.CreateToken(username, s.secretKey, "access")
+	if err != nil {
+		return "", "", err
+	}
+	tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh")
+	if err != nil {
+		return "", "", err
+	}
+	return tokenAccess, tokenRefresh, nil
 }
 
 var logger log.Logger
