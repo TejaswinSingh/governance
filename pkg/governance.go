@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/TejaswinSingh/version0/services/governance/auth"
-	"github.com/TejaswinSingh/version0/services/governance/errors"
-	"github.com/TejaswinSingh/version0/services/governance/redis"
+	"github.com/Resolyte-official/service-governance/pkg/auth"
+	"github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/redis"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )

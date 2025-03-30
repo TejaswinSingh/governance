@@ -3,7 +3,7 @@ package governance
 import (
 	"context"
 
-	"github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/golang-jwt/jwt/v5"
 )
 

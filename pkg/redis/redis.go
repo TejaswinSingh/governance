@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/go-kit/log"
 	"github.com/redis/go-redis/v9"
 )

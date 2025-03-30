@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/TejaswinSingh/version0/services/governance/endpoints"
-	governanceErrors "github.com/TejaswinSingh/version0/services/governance/errors"
-	"github.com/TejaswinSingh/version0/services/governance/redis"
+	"github.com/Resolyte-official/service-governance/pkg/endpoints"
+	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/redis"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
 )

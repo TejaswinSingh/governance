@@ -11,10 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/TejaswinSingh/version0/services/governance"
-	"github.com/TejaswinSingh/version0/services/governance/endpoints"
-	"github.com/TejaswinSingh/version0/services/governance/redis"
-	"github.com/TejaswinSingh/version0/services/governance/transport"
+	governance "github.com/Resolyte-official/service-governance/pkg"
+	"github.com/Resolyte-official/service-governance/pkg/endpoints"
+	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/transport"
+
 	"github.com/go-kit/log"
 	"github.com/oklog/oklog/pkg/group"
 )

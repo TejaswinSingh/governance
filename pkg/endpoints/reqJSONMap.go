@@ -1,7 +1,7 @@
 package endpoints
 
 import (
-	"github.com/TejaswinSingh/version0/services/governance/errors"
+	"github.com/Resolyte-official/service-governance/pkg/errors"
 )
 
 type ServiceStatusRequest struct{}

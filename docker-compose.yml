@@ -5,7 +5,7 @@ services:
     container_name: governance
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.governance
     ports:
       - ${GOVERNANCE_HTTP_PORT}:${GOVERNANCE_HTTP_PORT}
     env_file:

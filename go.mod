@@ -1,4 +1,4 @@
-module github.com/TejaswinSingh/version0
+module github.com/Resolyte-official/service-governance
 
 go 1.22
 

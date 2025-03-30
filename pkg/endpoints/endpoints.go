@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/TejaswinSingh/version0/services/governance"
+	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"

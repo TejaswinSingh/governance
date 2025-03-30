@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/TejaswinSingh/version0/services/governance"
-	"github.com/TejaswinSingh/version0/services/governance/auth"
-	"github.com/TejaswinSingh/version0/services/governance/errors"
-	myredis "github.com/TejaswinSingh/version0/services/governance/redis"
+	governance "github.com/Resolyte-official/service-governance/pkg"
+	"github.com/Resolyte-official/service-governance/pkg/auth"
+	"github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/redis"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -25,7 +26,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func JWTAuthMiddleware(secretKey string, redisService *myredis.RedisService, next http.Handler) http.Handler {
+func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		switch r.URL.Path {
