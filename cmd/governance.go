@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultHTTPPort      = "12000"
+	defaultHTTPPort      = "12001"
 	defaultRedisHost     = "redis"
 	defaultRedisPort     = "6379"
 	defaultRedisDatabase = "0"
