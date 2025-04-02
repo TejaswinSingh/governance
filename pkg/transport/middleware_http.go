@@ -26,9 +26,11 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, next http.Handler) http.Handler {
+func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var claims jwt.MapClaims
 
+		// authentication
 		switch r.URL.Path {
 		case "/auth/refresh":
 			// get refresh-token
@@ -38,7 +40,7 @@ func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, next 
 				return
 			}
 			tokenType := "refresh"
-			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -53,7 +55,7 @@ func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, next 
 				return
 			}
 			tokenType := "refresh"
-			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -81,12 +83,27 @@ func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, next 
 				return
 			}
 			tokenType := "access"
-			claims, err := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
 			}
 			r = setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token)
+		}
+
+		// authorization
+		{
+			role, _ := claims["aud"].(string)
+			ok, err := casbinService.CheckPermission(role, r.URL.Path, r.Method)
+			logger.Log("role", role, "path", r.URL.Path, "method", r.Method)
+			if err != nil {
+				encodeError(r.Context(), err, w)
+				return
+			}
+			if !ok {
+				encodeError(r.Context(), errors.ErrAccessDenied, w)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)

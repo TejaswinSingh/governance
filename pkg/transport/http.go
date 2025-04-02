@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/redis"
@@ -15,10 +16,10 @@ import (
 	"github.com/go-kit/log"
 )
 
-func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.RedisService) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+	m.Handle("/governance/healthz", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
@@ -31,14 +32,14 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.Redi
 		httptransport.ServerErrorEncoder(encodeError), // errors occured while decoding will be passed to this
 	), "POST"))
 
-	m.Handle("/auth/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+	m.Handle("/auth/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST"))
 
-	m.Handle("/auth/refresh", AllowMethods(JWTAuthMiddleware(secretKey, redisService, httptransport.NewServer(
+	m.Handle("/auth/refresh", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,

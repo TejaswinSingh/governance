@@ -30,7 +30,8 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 		return "", "", errors.ErrMissingCreds
 	}
 	// TODO: implement proper credentials check
-	if username == "admin" && password == "admin" {
+	// if username == "admin" && password == "admin"
+	if password == "password" {
 		tokenAccess, err = auth.CreateToken(username, s.secretKey, "access")
 		if err != nil {
 			return "", "", err

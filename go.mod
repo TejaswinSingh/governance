@@ -3,6 +3,7 @@ module github.com/Resolyte-official/service-governance
 go 1.22
 
 require (
+	github.com/casbin/casbin/v2 v2.37.0
 	github.com/go-kit/kit v0.13.0
 	github.com/go-kit/log v0.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -11,6 +12,7 @@ require (
 )
 
 require (
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect

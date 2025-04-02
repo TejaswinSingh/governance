@@ -14,6 +14,7 @@ FROM alpine:3.21.3
 WORKDIR /root/
 
 COPY --from=builder /app/governance /root/
+COPY --from=builder /app/config /root/config/
 
 # will be overriden by docker-compose
 CMD ["/bin/sh"]

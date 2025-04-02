@@ -12,6 +12,7 @@ import (
 	"time"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
+	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	"github.com/Resolyte-official/service-governance/pkg/redis"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
@@ -47,6 +48,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	casbinService, err := auth.NewService()
+	if err != nil {
+		logger.Log("exit", "Failed to create casbin service", "error", err)
+		os.Exit(1)
+	}
+
 	var (
 		RedisService = redis.NewService(
 			fmt.Sprintf("%s:%s", redisHost, redisPort),
@@ -54,7 +61,7 @@ func main() {
 		)
 		service     = governance.NewService(secretKey, RedisService)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, secretKey, RedisService)
+		httpHandler = transport.NewHTTPHandler(eps, secretKey, RedisService, casbinService)
 	)
 
 	var g group.Group

@@ -91,6 +91,12 @@ func VerifyToken(ctx context.Context, redisService *redis.RedisService, tokenStr
 		return nil, errors.ErrInvalidClaims
 	}
 
+	// validate aud(role)
+	aud, ok := claims["aud"].(string)
+	if !ok || aud == "" {
+		return nil, errors.ErrInvalidClaims
+	}
+
 	// validate that token is not blacklisted
 	val, err_ := redisService.Get(ctx, tokenString)
 	if err_ != nil && err_ != errors.ErrRedisKeyNotExist {
@@ -121,7 +127,7 @@ func getRole(username string) string {
 	if username == "admin" {
 		return "admin"
 	}
-	return "employee"
+	return "parent"
 }
 
 var logger log.Logger
