@@ -55,13 +55,13 @@ func main() {
 	}
 
 	var (
-		RedisService = redis.NewService(
+		redisService = redis.NewService(
 			fmt.Sprintf("%s:%s", redisHost, redisPort),
 			reddisPassword, redisDB,
 		)
-		service     = governance.NewService(secretKey, RedisService)
+		service     = governance.NewService(secretKey, redisService)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, secretKey, RedisService, casbinService)
+		httpHandler = transport.NewHTTPHandler(eps, secretKey, redisService, casbinService)
 	)
 
 	var g group.Group
@@ -89,7 +89,7 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					_, err := RedisService.Ping(ctx)
+					_, err := redisService.Ping(ctx)
 					if err != nil {
 						logger.Log("service", "Redis", "status", "disconnected", "error", err)
 						return nil
@@ -101,7 +101,7 @@ func main() {
 				}
 			}
 		}, func(error) {
-			RedisService.Close()
+			redisService.Close()
 		})
 	}
 
