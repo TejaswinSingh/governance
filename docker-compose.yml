@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   governance:
     container_name: governance
