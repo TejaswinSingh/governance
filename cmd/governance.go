@@ -73,22 +73,29 @@ func main() {
 	var g group.Group
 
 	{
+		srv := &http.Server{
+			Addr:    httpAddr,
+			Handler: httpHandler,
+		}
 		g.Add(func() error {
 			if https == "true" {
 				logger.Log("transport", "HTTPS", "addr", httpAddr)
-				return http.ListenAndServeTLS(httpAddr, "config/cert.pem", "config/key.pem", httpHandler)
+				return srv.ListenAndServeTLS("config/cert.pem", "config/key.pem")
 			}
 			// http
 			logger.Log("transport", "HTTP", "addr", httpAddr)
-			return http.ListenAndServe(httpAddr, httpHandler)
+			return srv.ListenAndServe()
 		}, func(err error) {
-			logger.Log("exit", "HTTP server stopped", "error", err)
+			logger.Log("exit", "shutting down HTTP server", "error", err)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = srv.Shutdown(ctx)
 		})
 	}
 
 	{
 		// redis
-		ctx := context.Background()
+		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
 			ticker := time.NewTicker(30 * time.Second)
 			defer ticker.Stop()
@@ -107,6 +114,7 @@ func main() {
 				}
 			}
 		}, func(error) {
+			cancel()
 			redisService.Close()
 		})
 	}
