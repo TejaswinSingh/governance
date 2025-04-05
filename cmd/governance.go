@@ -35,12 +35,18 @@ func main() {
 	var (
 		// httpAddr = net.JoinHostPort("localhost", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
 		httpAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
+		https          = envString("HTTPS", "false")
 		secretKey      = requireEnv("SECRET_KEY", logger)
 		redisHost      = envString("REDIS_HOST", defaultRedisHost)
 		redisPort      = envString("REDIS_PORT", defaultRedisPort)
 		reddisPassword = requireEnv("REDIS_PASSWORD", logger)
 		redisDatabase  = envString("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
 	)
+
+	if https == "true" {
+		requireFile("config/cert.pem", logger)
+		requireFile("config/key.pem", logger)
+	}
 
 	redisDB, err := strconv.Atoi(redisDatabase)
 	if err != nil || redisDB < 0 || redisDB > 15 {
@@ -67,16 +73,16 @@ func main() {
 	var g group.Group
 
 	{
-		httpListener, err := net.Listen("tcp", httpAddr)
-		if err != nil {
-			logger.Log("transport", "HTTP", "during", "Listen", "err", err)
-			os.Exit(1)
-		}
 		g.Add(func() error {
+			if https == "true" {
+				logger.Log("transport", "HTTPS", "addr", httpAddr)
+				return http.ListenAndServeTLS(httpAddr, "config/cert.pem", "config/key.pem", httpHandler)
+			}
+			// http
 			logger.Log("transport", "HTTP", "addr", httpAddr)
-			return http.Serve(httpListener, httpHandler)
+			return http.ListenAndServe(httpAddr, httpHandler)
 		}, func(error) {
-			httpListener.Close()
+			logger.Log("exit", "HTTP server stopped", "error", err)
 		})
 	}
 
@@ -139,4 +145,12 @@ func requireEnv(env string, logger log.Logger) string {
 		os.Exit(1)
 	}
 	return e
+}
+
+func requireFile(path string, logger log.Logger) {
+	_, err := os.Stat(path)
+	if err != nil {
+		logger.Log("exit", err)
+		os.Exit(1)
+	}
 }
