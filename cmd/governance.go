@@ -81,7 +81,7 @@ func main() {
 			// http
 			logger.Log("transport", "HTTP", "addr", httpAddr)
 			return http.ListenAndServe(httpAddr, httpHandler)
-		}, func(error) {
+		}, func(err error) {
 			logger.Log("exit", "HTTP server stopped", "error", err)
 		})
 	}
