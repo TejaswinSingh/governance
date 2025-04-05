@@ -29,4 +29,4 @@ To generate self-signed certificates:
 
 ```bash
 # run from project root
-make generate_cert_and_key
+make generate_cert
