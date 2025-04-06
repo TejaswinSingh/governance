@@ -40,7 +40,8 @@ var (
 	ErrInvalidSignMethod = NewServiceError(http.StatusUnauthorized, "INVALID_SIGN_METHOD", "The token's signing method is invalid or does not match the expected algorithm. Ensure that the correct signing algorithm is used.")
 	ErrInvalidToken      = NewServiceError(http.StatusUnauthorized, "INVALID_TOKEN", "The provided token is invalid, malformed, or has been tampered with. Please provide a valid token and try again.")
 	ErrInvalidClaims     = NewServiceError(http.StatusUnauthorized, "INVALID_CLAIMS", "The token's claims are invalid, missing required fields, or have an incorrect format. Ensure that the token contains valid claims.")
-	ErrNoRefreshCookie   = NewServiceError(http.StatusUnauthorized, "NO_REFRESH_COOKIE", "The refresh token cookie is missing. Please ensure that the refresh token is set in the cookie and try again.")
+	ErrNoRefreshToken    = NewServiceError(http.StatusUnauthorized, "NO_REFRESH_TOKEN", "Unauthorized request. Please provide a valid X-Refresh-Token header.")
+	ErrMismatchedClaims  = NewServiceError(http.StatusUnauthorized, "MISMATCHED_CLAIMS", "The claims in the access and refresh tokens do not match. Please re-authenticate.")
 
 	// auth-Z errors
 	ErrAccessDenied      = NewServiceError(http.StatusForbidden, "ACCESS_DENIED", "You do not have permission to perform this action.")

@@ -2,15 +2,44 @@ package transport
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
-	"github.com/Resolyte-official/service-governance/pkg/errors"
+	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/redis"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// CorsOptions defines the structure for CORS configuration options
+type CorsOptions struct {
+	Origin           string   // Origin specifies the origin that is allowed to access the resource
+	Methods          []string // Methods is a list of HTTP methods allowed when accessing the resource
+	Headers          []string // Headers is a list of HTTP headers that can be used when making the actual request
+	ExposeHeaders    []string // ExposeHeaders indicates which headers are safe to expose to the API of a CORS API specification
+	AllowCredentials bool     // AllowCredentials indicates whether or not the response to the request can be exposed when the credentials flag is true
+}
+
+func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", corsConfig.Origin)
+		w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
+		w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
+		w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
+		w.Header().Set("Access-Control-Allow-Credentials", fmt.Sprint(corsConfig.AllowCredentials))
+
+		// preflight request
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +48,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 			allowed[method] = struct{}{}
 		}
 		if _, ok := allowed[r.Method]; !ok {
-			encodeError(r.Context(), errors.ErrMethodNotAllowed, w)
+			encodeError(r.Context(), myerrors.ErrMethodNotAllowed, w)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -28,82 +57,62 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 
 func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var claims jwt.MapClaims
+		var (
+			claims jwt.MapClaims
+			err    *myerrors.ServiceError
+		)
 
 		// authentication
 		switch r.URL.Path {
 		case "/auth/refresh":
-			// get refresh-token
-			token, err := getTokenFromCookie(r, "refresh_token")
+			// refresh token
+			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "refresh")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
 			}
-			tokenType := "refresh"
-			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-			r = setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token)
 
 		case "/auth/logout":
-			// get refresh-token
-			token, err := getTokenFromCookie(r, "refresh_token")
+			// access token
+			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
 			}
-			tokenType := "refresh"
-			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
-			if err != nil {
-				encodeError(r.Context(), err, w)
+			// refresh token
+			var claims2 jwt.MapClaims
+			var err2 *myerrors.ServiceError
+			r, claims2, err2 = extractAndVerifyToken(r, redisService, secretKey, "refresh")
+			if err2 != nil {
+				encodeError(r.Context(), err2, w)
 				return
 			}
-			r = setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token)
-			// get access-token
-			token, err = getTokenFromHeader(r)
-			if err != nil {
-				encodeError(r.Context(), err, w)
+			// check that both tokens have the same claims
+			if !auth.CompareJWTClaims(claims, claims2, "sub", "iss", "aud") {
+				encodeError(r.Context(), myerrors.ErrMismatchedClaims, w)
 				return
 			}
-			tokenType = "access"
-			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-			r = setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token)
 
 		default:
-			// get access-token
-			token, err := getTokenFromHeader(r)
+			// access token
+			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
 			}
-			tokenType := "access"
-			claims, err = auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-			r = setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token)
 		}
 
 		// authorization
-		{
-			role, _ := claims["aud"].(string)
-			ok, err := casbinService.CheckPermission(role, r.URL.Path, r.Method)
-			logger.Log("role", role, "path", r.URL.Path, "method", r.Method)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-			if !ok {
-				encodeError(r.Context(), errors.ErrAccessDenied, w)
-				return
-			}
+		role, _ := claims["aud"].(string)
+		ok, err := casbinService.CheckPermission(role, r.URL.Path, r.Method)
+		logger.Log("role", role, "path", r.URL.Path, "method", r.Method)
+		if err != nil { // casbin errors
+			encodeError(r.Context(), err, w)
+			return
+		}
+		if !ok { // denied
+			encodeError(r.Context(), myerrors.ErrAccessDenied, w)
+			return
 		}
 
 		next.ServeHTTP(w, r)
@@ -111,20 +120,42 @@ func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, casbi
 }
 
 // helpers
-func getTokenFromCookie(r *http.Request, cookieName string) (string, *errors.ServiceError) {
-	cookie, err := r.Cookie(cookieName)
-	if err != nil && cookieName == "refresh_token" {
-		return "", errors.ErrNoRefreshCookie
+func extractAndVerifyToken(r *http.Request, redisService *redis.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, *myerrors.ServiceError) {
+	if tokenType == "refresh" {
+		token, err := getTokenFromHeader(r, "X-Refresh-Token")
+		if err != nil {
+			return r, nil, myerrors.ErrNoRefreshToken
+		}
+		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+		if err2 != nil {
+			return r, nil, err2
+		}
+		// add tokens and claims to request.context
+		// this makes them available inside service methods
+		return setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token), claims, nil
+	} else {
+		tokenType = "access"
+		token, err := getTokenFromHeader(r, "Authorization")
+		if err != nil {
+			return r, nil, myerrors.ErrUnauthorized
+		}
+		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+		if err2 != nil {
+			return r, nil, err2
+		}
+		return setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token), claims, nil
 	}
-	return cookie.Value, nil
 }
 
-func getTokenFromHeader(r *http.Request) (string, *errors.ServiceError) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return "", errors.ErrUnauthorized
+func getTokenFromHeader(r *http.Request, headerKey string) (string, error) {
+	headerVal := r.Header.Get(headerKey)
+	if headerVal == "" {
+		return "", errors.New("missing header key")
 	}
-	return auth.ExtractToken(authHeader), nil
+	if headerKey == "Authorization" {
+		return auth.ExtractToken(headerVal), nil
+	}
+	return headerVal, nil
 }
 
 func setContext(r *http.Request, claimsKey governance.ContextKey, claimsValue jwt.MapClaims, tokenKey governance.ContextKey, tokenValue string) *http.Request {

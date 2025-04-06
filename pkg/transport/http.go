@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
@@ -16,35 +15,35 @@ import (
 	"github.com/go-kit/log"
 )
 
-func NewHTTPHandler(ep endpoints.Set, secretKey string, redisService *redis.RedisService, casbinService *auth.CasbinService) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *redis.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/governance/healthz", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
-	)), "GET"))
+	)), "GET")))
 
-	m.Handle("/auth/login", AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // errors occured while decoding will be passed to this
-	), "POST"))
+	), "POST")))
 
-	m.Handle("/auth/logout", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/logout", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))
+	)), "POST")))
 
-	m.Handle("/auth/refresh", AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/refresh", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))
+	)), "POST")))
 
 	return m
 }
@@ -83,39 +82,15 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	// set access-token in header and refresh-token as cookie
-	// for LoginResponse & RefreshResponse
+	// set access token and refresh token in the header
+	// for login and refresh response
 	if resp, ok := response.(interface {
 		GetAccessToken() string
 		GetRefreshToken() string
 	}); ok {
 		w.Header().Set("Authorization", "Bearer "+resp.GetAccessToken())
-		http.SetCookie(w, &http.Cookie{
-			Name:     "refresh_token",
-			Value:    resp.GetRefreshToken(),
-			HttpOnly: true, // prevents JavaScript access
-			// Secure:   true, // HTTPS
-			SameSite: http.SameSiteStrictMode,
-			Path:     "/auth/",
-		})
-		w.WriteHeader(http.StatusOK)
-		logger.Log("Response", response)
-		return nil
-	}
-
-	// Remove the refresh-token cookie for LogoutResponse
-	if _, ok := response.(endpoints.LogoutResponse); ok {
-		http.SetCookie(w, &http.Cookie{
-			Name:     "refresh_token",
-			Value:    "",
-			HttpOnly: true,
-			// Secure:   true,
-			SameSite: http.SameSiteStrictMode,
-			Path:     "/auth/",
-			MaxAge:   -1,              // Marks cookie for immediate removal
-			Expires:  time.Unix(0, 0), // Expire immediately
-		})
-		w.WriteHeader(http.StatusOK)
+		w.Header().Set("X-Refresh-Token", resp.GetRefreshToken())
+		w.WriteHeader(http.StatusNoContent)
 		logger.Log("Response", response)
 		return nil
 	}

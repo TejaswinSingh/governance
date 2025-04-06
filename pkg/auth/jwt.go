@@ -109,6 +109,18 @@ func VerifyToken(ctx context.Context, redisService *redis.RedisService, tokenStr
 	return claims, nil
 }
 
+// compares two JWT claims
+func CompareJWTClaims(c1, c2 jwt.MapClaims, keys ...string) bool {
+	for _, key := range keys {
+		v1, ok1 := c1[key].(string)
+		v2, ok2 := c2[key].(string)
+		if !ok1 || !ok2 || v1 != v2 {
+			return false
+		}
+	}
+	return true
+}
+
 func BlacklistToken(ctx context.Context, redisService *redis.RedisService, token string, claims jwt.MapClaims) *errors.ServiceError {
 	expTime, ok := claims["exp"].(float64)
 	if !ok {

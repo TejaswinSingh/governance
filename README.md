@@ -19,6 +19,8 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=myredispassword
 REDIS_DATABASE_GOVERNANCE=0
+
+CORS_ORIGIN=http://127.0.0.1:5500
 ```
 
 ## HTTPS Setup
@@ -30,3 +32,6 @@ To generate self-signed certificates:
 ```bash
 # run from project root
 make generate_cert
+```
+
+NOTE: self-signed certs won't be accepted by browsers unless you explicitly tell them to

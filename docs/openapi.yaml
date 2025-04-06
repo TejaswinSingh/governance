@@ -55,11 +55,11 @@ paths:
               description: Bearer access token
               schema:
                 type: string
-            Set-Cookie:
-              description: Refresh token cookie
+            X-Refresh-Token:
+              description: Refresh token for future authentication
               schema:
                 type: string
-                example: refresh_token=abcdef123456; HttpOnly; Secure; Path=/auth/refresh; SameSite=Strict
+                example: abcdef123456
           content:
             application/json:
               schema:
@@ -78,7 +78,7 @@ paths:
       summary: User logout
       security:
         - bearerAuth: []
-        - cookieAuth: []
+        - refreshHeaderAuth: []
       responses:
         "200":
           description: Successfully logged out
@@ -101,7 +101,7 @@ paths:
     post:
       summary: Refresh access token
       security:
-        - cookieAuth: []
+        - refreshHeaderAuth: []
       responses:
         "200":
           description: Token refreshed
@@ -110,11 +110,11 @@ paths:
               description: Bearer new access token
               schema:
                 type: string
-            Set-Cookie:
-              description: New refresh token cookie
+            X-Refresh-Token:
+              description: New refresh token
               schema:
                 type: string
-                example: refresh_token=newtoken123456; HttpOnly; Secure; Path=/auth/refresh; SameSite=Strict
+                example: newtoken123456
           content:
             application/json:
               schema:
@@ -136,7 +136,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    cookieAuth:
+    refreshHeaderAuth:
       type: apiKey
-      in: cookie
-      name: refresh_token
+      in: header
+      name: X-Refresh-Token

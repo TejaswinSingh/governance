@@ -26,6 +26,7 @@ const (
 	defaultRedisHost     = "redis"
 	defaultRedisPort     = "6379"
 	defaultRedisDatabase = "0"
+	defaultCORSOrigin    = "http://127.0.0.1:5500"
 )
 
 func main() {
@@ -41,6 +42,7 @@ func main() {
 		redisPort      = envString("REDIS_PORT", defaultRedisPort)
 		reddisPassword = requireEnv("REDIS_PASSWORD", logger)
 		redisDatabase  = envString("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
+		corsOrigin     = envString("CORS_ORIGIN", defaultCORSOrigin)
 	)
 
 	if https == "true" {
@@ -61,13 +63,20 @@ func main() {
 	}
 
 	var (
+		corsConfig = &transport.CorsOptions{
+			Origin:           corsOrigin,                                                                                                  // Allow only specified origin
+			Methods:          []string{"GET", "POST", "OPTIONS", "PUT", "UPDATE", "DELETE"},                                               // Allow common HTTP methods
+			Headers:          []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-Refresh-Token"}, // Allow common HTTP headers
+			ExposeHeaders:    []string{"Content-Type", "Authorization", "X-Refresh-Token"},                                                // Allow any headers to be exposed
+			AllowCredentials: false,                                                                                                       // Allow credentials to be included
+		}
 		redisService = redis.NewService(
 			fmt.Sprintf("%s:%s", redisHost, redisPort),
 			reddisPassword, redisDB,
 		)
 		service     = governance.NewService(secretKey, redisService)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, secretKey, redisService, casbinService)
+		httpHandler = transport.NewHTTPHandler(eps, secretKey, corsConfig, redisService, casbinService)
 	)
 
 	var g group.Group
