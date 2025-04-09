@@ -12,6 +12,7 @@ ENV=development
 HTTPS=false
 
 GOVERNANCE_HTTP_PORT=12001
+GOVERNANCE_GRPC_PORT=9090
 SECRET_KEY=my-secret-key
 
 # Redis configuration

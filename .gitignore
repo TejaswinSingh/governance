@@ -29,6 +29,7 @@ TODO
 
 # dev
 sh/
+client/
 
 # certs and keys
 *.pem

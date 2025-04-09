@@ -6,6 +6,7 @@ services:
       dockerfile: Dockerfile.governance
     ports:
       - ${GOVERNANCE_HTTP_PORT}:${GOVERNANCE_HTTP_PORT}
+      - ${GOVERNANCE_GRPC_PORT}:${GOVERNANCE_GRPC_PORT}
     env_file:
       - .env
     depends_on:

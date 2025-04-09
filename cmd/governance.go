@@ -14,8 +14,10 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
+	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/Resolyte-official/service-governance/pkg/redis"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
+	"google.golang.org/grpc"
 
 	"github.com/go-kit/log"
 	"github.com/oklog/oklog/pkg/group"
@@ -27,6 +29,7 @@ const (
 	defaultRedisPort     = "6379"
 	defaultRedisDatabase = "0"
 	defaultCORSOrigin    = "http://127.0.0.1:5500"
+	defaultGRPCPort      = "9090"
 )
 
 func main() {
@@ -36,6 +39,7 @@ func main() {
 	var (
 		// httpAddr = net.JoinHostPort("localhost", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
 		httpAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
+		grpcAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort))
 		https          = envString("HTTPS", "false")
 		secretKey      = requireEnv("SECRET_KEY", logger)
 		redisHost      = envString("REDIS_HOST", defaultRedisHost)
@@ -77,11 +81,13 @@ func main() {
 		service     = governance.NewService(secretKey, redisService)
 		eps         = endpoints.NewEndpointSet(service)
 		httpHandler = transport.NewHTTPHandler(eps, secretKey, corsConfig, redisService, casbinService)
+		grpcServer  = transport.NewGRPCServer(eps)
 	)
 
 	var g group.Group
 
 	{
+		// http
 		srv := &http.Server{
 			Addr:    httpAddr,
 			Handler: httpHandler,
@@ -99,6 +105,24 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			_ = srv.Shutdown(ctx)
+		})
+	}
+
+	{
+		// grpc
+		grpcListener, err := net.Listen("tcp", grpcAddr)
+		if err != nil {
+			logger.Log("transport", "gRPC", "during", "Listen", "error", err)
+			os.Exit(1)
+		}
+		baseServer := grpc.NewServer()
+		pb.RegisterGovernanceServer(baseServer, grpcServer)
+		g.Add(func() error {
+			logger.Log("transport", "gRPC", "addr", grpcAddr)
+			return baseServer.Serve(grpcListener)
+		}, func(error) {
+			logger.Log("exit", "shutting down GRPC server", "error", err)
+			baseServer.Stop()
 		})
 	}
 
