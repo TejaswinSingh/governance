@@ -7,7 +7,6 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/log"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type Set struct {
@@ -31,7 +30,7 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 		_ = request.(ServiceStatusRequest)
 		code, err := svc.ServiceStatus(ctx)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 		return ServiceStatusResponse{Code: code, Err: nil}, nil
 	}
@@ -42,7 +41,7 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 		req := request.(LoginRequest)
 		tokenAccess, tokenRefresh, err := svc.Login(ctx, req.Username, req.Password)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 		return LoginResponse{
 			TokenAccess:  tokenAccess,
@@ -53,15 +52,10 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 
 func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
-		_ = request.(LogoutRequest)
-		// get values extracted by the auth middleware
-		tokenAccess, _ := ctx.Value(governance.AccessTokenKey).(string)
-		tokenRefresh, _ := ctx.Value(governance.RefreshTokenKey).(string)
-		accessClaims, _ := ctx.Value(governance.AccessClaimsKey).(jwt.MapClaims)
-		refreshClaims, _ := ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims)
-		err := svc.Logout(ctx, tokenAccess, tokenRefresh, accessClaims, refreshClaims)
+		req := request.(LogoutRequest)
+		err := svc.Logout(ctx, req.TokenAccess, req.TokenRefresh, req.ClaimsAccess, req.ClaimsRefresh)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 		return LogoutResponse{Err: nil}, nil
 	}
@@ -69,12 +63,10 @@ func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 
 func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
-		_ = request.(RefreshRequest)
-		token, _ := ctx.Value(governance.RefreshTokenKey).(string)
-		claims, _ := ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims)
-		tokenAccess, tokenRefresh, err := svc.Refresh(ctx, token, claims)
+		req := request.(RefreshRequest)
+		tokenAccess, tokenRefresh, err := svc.Refresh(ctx, req.TokenRefresh, req.ClaimsRefresh)
 		if err != nil {
-			return err, nil
+			return nil, err
 		}
 		return RefreshResponse{
 			TokenAccess:  tokenAccess,

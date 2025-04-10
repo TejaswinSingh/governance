@@ -131,7 +131,7 @@ func extractAndVerifyToken(r *http.Request, redisService *redis.RedisService, se
 			return r, nil, err2
 		}
 		// add tokens and claims to request.context
-		// this makes them available inside service methods
+		// this makes them available inside request decoders
 		return setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token), claims, nil
 	} else {
 		tokenType = "access"

@@ -7,12 +7,14 @@ import (
 	"net/http"
 	"os"
 
+	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/redis"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *redis.RedisService, casbinService *auth.CasbinService) http.Handler {
@@ -22,13 +24,14 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions,
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
+		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
 	)), "GET")))
 
 	m.Handle("/auth/login", CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
-		httptransport.ServerErrorEncoder(encodeError), // errors occured while decoding will be passed to this
+		httptransport.ServerErrorEncoder(encodeError),
 	), "POST")))
 
 	m.Handle("/auth/logout", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
@@ -49,8 +52,7 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions,
 }
 
 func decodeHTTPServiceStatusRequest(_ context.Context, _ *http.Request) (any, error) {
-	var req endpoints.ServiceStatusRequest
-	return req, nil
+	return endpoints.ServiceStatusRequest{}, nil
 }
 
 func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (any, error) {
@@ -64,20 +66,26 @@ func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (any, error) {
 	return req, nil
 }
 
-func decodeHTTPLogoutRequest(_ context.Context, r *http.Request) (any, error) {
-	var req endpoints.LogoutRequest
-	return req, nil
+func decodeHTTPLogoutRequest(ctx context.Context, r *http.Request) (any, error) {
+	return endpoints.LogoutRequest{
+		// get values extracted by the auth middleware
+		TokenAccess:   ctx.Value(governance.AccessTokenKey).(string),
+		TokenRefresh:  ctx.Value(governance.RefreshTokenKey).(string),
+		ClaimsAccess:  ctx.Value(governance.AccessClaimsKey).(jwt.MapClaims),
+		ClaimsRefresh: ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims),
+	}, nil
 }
 
-func decodeHTTPRefreshRequest(_ context.Context, r *http.Request) (any, error) {
-	var req endpoints.RefreshRequest
-	return req, nil
+func decodeHTTPRefreshRequest(ctx context.Context, r *http.Request) (any, error) {
+	return endpoints.RefreshRequest{
+		TokenRefresh:  ctx.Value(governance.RefreshTokenKey).(string),
+		ClaimsRefresh: ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims),
+	}, nil
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) error {
 	if e, ok := response.(error); ok && e != nil {
-		encodeError(ctx, e, w)
-		return nil
+		return e
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -90,31 +98,30 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 	}); ok {
 		w.Header().Set("Authorization", "Bearer "+resp.GetAccessToken())
 		w.Header().Set("X-Refresh-Token", resp.GetRefreshToken())
-		w.WriteHeader(http.StatusNoContent)
-		logger.Log("Response", response)
-		return nil
 	}
 
+	logger.Log("Response", response)
 	w.WriteHeader(http.StatusOK)
-	logger.Log("Response", response) // log the response
 	return json.NewEncoder(w).Encode(response)
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 	var serviceErr *governanceErrors.ServiceError
 	if errors.As(err, &serviceErr) {
+		logger.Log("Error", serviceErr.Error())
 		w.WriteHeader(serviceErr.HTTPCode)
 		json.NewEncoder(w).Encode(serviceErr)
-		logger.Log("Error", serviceErr.Error()) // log the error
 		return
 	}
 
-	// default to internal server error if error is unknown
+	// default to internal server error if it is unknown
+	// but still log the original error
+	logger.Log("Error", err.Error())
 	error := governanceErrors.ErrInternalServer
 	w.WriteHeader(error.HTTPCode)
 	json.NewEncoder(w).Encode(error)
-	logger.Log("Error", error.Error())
 }
 
 var logger log.Logger
