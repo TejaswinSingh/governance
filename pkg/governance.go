@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
@@ -32,11 +33,12 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 	// TODO: implement proper credentials check
 	// if username == "admin" && password == "admin"
 	if password == "password" {
-		tokenAccess, err = auth.CreateToken(username, s.secretKey, "access")
+		now := time.Now()
+		tokenAccess, err = auth.CreateToken(username, s.secretKey, "access", now)
 		if err != nil {
 			return "", "", err
 		}
-		tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh")
+		tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh", now)
 		if err != nil {
 			return "", "", err
 		}
@@ -73,11 +75,12 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 
 	// create new access and refresh tokens
 	username, _ := claimsRefresh["sub"].(string)
-	tokenAccess, err = auth.CreateToken(username, s.secretKey, "access")
+	now := time.Now()
+	tokenAccess, err = auth.CreateToken(username, s.secretKey, "access", now)
 	if err != nil {
 		return "", "", err
 	}
-	tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh")
+	tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh", now)
 	if err != nil {
 		return "", "", err
 	}

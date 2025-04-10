@@ -16,14 +16,13 @@ const (
 	refreshTokenExpiry = time.Hour * 24 * 15 // 15 days
 )
 
-func CreateToken(username, secretKey, tokenType string) (string, *errors.ServiceError) {
+func CreateToken(username, secretKey, tokenType string, now time.Time) (string, *errors.ServiceError) {
 	var exp time.Duration
 	if tokenType == "access" {
 		exp = accessTokenExpiry
 	} else { // refresh
 		exp = refreshTokenExpiry
 	}
-	now := time.Now()
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"type": tokenType,            // Type of token
 		"sub":  username,             // Subject (user identifier)
