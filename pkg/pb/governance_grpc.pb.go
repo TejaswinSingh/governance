@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Governance_ServiceStatus_FullMethodName = "/governance_pb.Governance/ServiceStatus"
+	Governance_ValidateToken_FullMethodName = "/governance_pb.Governance/ValidateToken"
 )
 
 // GovernanceClient is the client API for Governance service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GovernanceClient interface {
 	ServiceStatus(ctx context.Context, in *ServiceStatusRequest, opts ...grpc.CallOption) (*ServiceStatusResponse, error)
+	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
 }
 
 type governanceClient struct {
@@ -47,11 +49,22 @@ func (c *governanceClient) ServiceStatus(ctx context.Context, in *ServiceStatusR
 	return out, nil
 }
 
+func (c *governanceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateTokenResponse)
+	err := c.cc.Invoke(ctx, Governance_ValidateToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GovernanceServer is the server API for Governance service.
 // All implementations must embed UnimplementedGovernanceServer
 // for forward compatibility.
 type GovernanceServer interface {
 	ServiceStatus(context.Context, *ServiceStatusRequest) (*ServiceStatusResponse, error)
+	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
 	mustEmbedUnimplementedGovernanceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedGovernanceServer struct{}
 
 func (UnimplementedGovernanceServer) ServiceStatus(context.Context, *ServiceStatusRequest) (*ServiceStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ServiceStatus not implemented")
+}
+func (UnimplementedGovernanceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
 }
 func (UnimplementedGovernanceServer) mustEmbedUnimplementedGovernanceServer() {}
 func (UnimplementedGovernanceServer) testEmbeddedByValue()                    {}
@@ -104,6 +120,24 @@ func _Governance_ServiceStatus_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Governance_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GovernanceServer).ValidateToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Governance_ValidateToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GovernanceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Governance_ServiceDesc is the grpc.ServiceDesc for Governance service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var Governance_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ServiceStatus",
 			Handler:    _Governance_ServiceStatus_Handler,
+		},
+		{
+			MethodName: "ValidateToken",
+			Handler:    _Governance_ValidateToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

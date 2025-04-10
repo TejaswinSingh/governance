@@ -46,3 +46,11 @@ type RefreshResponse struct {
 
 func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }
 func (r RefreshResponse) GetRefreshToken() string { return r.TokenRefresh }
+
+type ValidateTokenRequest struct {
+	Token string
+}
+type ValidateTokenResponse struct {
+	Code int
+	Err  *errors.ServiceError
+}

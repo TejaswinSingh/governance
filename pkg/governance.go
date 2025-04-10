@@ -84,6 +84,14 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	return tokenAccess, tokenRefresh, nil
 }
 
+func (s *governanceService) ValidateToken(ctx context.Context, token string) (int, *errors.ServiceError) {
+	_, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
+	if err != nil {
+		return err.HTTPCode, err
+	}
+	return http.StatusOK, nil
+}
+
 var logger log.Logger
 
 func init() {

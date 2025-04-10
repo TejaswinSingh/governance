@@ -21,4 +21,5 @@ type Service interface {
 	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, err *errors.ServiceError)
 	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) *errors.ServiceError
 	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, err *errors.ServiceError)
+	ValidateToken(ctx context.Context, token string) (int, *errors.ServiceError)
 }
