@@ -1,0 +1,40 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Vendor directory (if using modules and not vendoring dependencies)
+vendor/
+
+# Git-related
+.git
+.gitignore
+.gitattributes
+
+# IDE/editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# TODO
+TODO
+
+# Environment files
+.env
+
+# Certificates and keys
+*.pem
+
+# dev
+sh/
+client/

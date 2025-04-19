@@ -16,5 +16,4 @@ WORKDIR /root/
 COPY --from=builder /app/governance /root/
 COPY --from=builder /app/config /root/config/
 
-# will be overriden by docker-compose
-CMD ["/bin/sh"]
+CMD ["/root/governance"]
