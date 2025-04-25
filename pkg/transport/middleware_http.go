@@ -10,7 +10,7 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -55,7 +55,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
+func JWTAuthMiddleware(secretKey string, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			claims jwt.MapClaims
@@ -120,7 +120,7 @@ func JWTAuthMiddleware(secretKey string, redisService *redis.RedisService, casbi
 }
 
 // helpers
-func extractAndVerifyToken(r *http.Request, redisService *redis.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, *myerrors.ServiceError) {
+func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, *myerrors.ServiceError) {
 	if tokenType == "refresh" {
 		token, err := getTokenFromHeader(r, "X-Refresh-Token")
 		if err != nil {

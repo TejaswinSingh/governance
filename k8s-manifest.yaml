@@ -11,11 +11,15 @@ data:
   REDIS_HOST: redis-service
   REDIS_PORT: "6379"
   REDIS_DATABASE_GOVERNANCE: "0"
+  MONGO_HOST: mongo-service
+  MONGO_PORT: "27017"
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: governance-deployment
+  labels:
+    app: governance
 spec:
   replicas: 2
   selector:
@@ -55,6 +59,57 @@ spec:
       port: 9090
       targetPort: 9090
       nodePort: 30101
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  labels:
+    app: mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongodb/mongodb-community-server:8.0.8-ubuntu2204
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secret
+                  key: MONGO_INITDB_ROOT_PASSWORD
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+      volumes:
+        - name: mongo-data
+          emptyDir: {} # ephemeral storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -101,7 +156,9 @@ kind: Secret
 metadata:
   name: app-secret
 type: Opaque
-stringData:
+data:
   SECRET_KEY: bXktc2VjcmV0LWtleQ==
   REDIS_PASSWORD: bXlyZWRpc3Bhc3N3b3Jk
+  MONGO_INITDB_ROOT_USERNAME: YWRtaW4=
+  MONGO_INITDB_ROOT_PASSWORD: bXltb25nb3Bhc3N3b3Jk
 ---

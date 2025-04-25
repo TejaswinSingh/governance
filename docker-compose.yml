@@ -11,6 +11,7 @@ services:
       - .env
     depends_on:
       - redis
+      - mongo
     networks:
       - governance_network
     volumes:
@@ -27,8 +28,22 @@ services:
       - governance_network
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
 
+  mongo:
+    image: "mongodb/mongodb-community-server:8.0.8-ubuntu2204"
+    container_name: mongo
+    ports:
+      - ${MONGO_PORT}:${MONGO_PORT}
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - governance_network
+
 volumes:
   redis_data:
+  mongo_data:
 
 networks:
   governance_network:

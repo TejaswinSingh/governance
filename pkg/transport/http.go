@@ -11,13 +11,13 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *redis.RedisService, casbinService *auth.CasbinService) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
 	m.Handle("/governance/healthz", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(

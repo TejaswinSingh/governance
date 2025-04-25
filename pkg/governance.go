@@ -8,17 +8,17 @@ import (
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type governanceService struct {
 	secretKey    string
-	redisService *redis.RedisService
+	redisService *persist.RedisService
 }
 
-func NewService(secretKey string, redisService *redis.RedisService) Service {
+func NewService(secretKey string, redisService *persist.RedisService) Service {
 	return &governanceService{secretKey: secretKey, redisService: redisService}
 }
 

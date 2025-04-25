@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -47,7 +47,7 @@ func ExtractToken(authHeader string) string {
 	return authHeader
 }
 
-func VerifyToken(ctx context.Context, redisService *redis.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, *errors.ServiceError) {
+func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, *errors.ServiceError) {
 	if tokenString == "" {
 		return nil, errors.ErrInvalidToken
 	}
@@ -120,7 +120,7 @@ func CompareJWTClaims(c1, c2 jwt.MapClaims, keys ...string) bool {
 	return true
 }
 
-func BlacklistToken(ctx context.Context, redisService *redis.RedisService, token string, claims jwt.MapClaims) *errors.ServiceError {
+func BlacklistToken(ctx context.Context, redisService *persist.RedisService, token string, claims jwt.MapClaims) *errors.ServiceError {
 	expTime, ok := claims["exp"].(float64)
 	if !ok {
 		return errors.ErrInvalidClaims

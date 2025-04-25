@@ -15,7 +15,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
-	"github.com/Resolyte-official/service-governance/pkg/redis"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
 	"google.golang.org/grpc"
 
@@ -24,12 +24,14 @@ import (
 )
 
 const (
+	defaultCORSOrigin    = "http://127.0.0.1:5500"
 	defaultHTTPPort      = "12001"
+	defaultGRPCPort      = "9090"
 	defaultRedisHost     = "redis"
 	defaultRedisPort     = "6379"
 	defaultRedisDatabase = "0"
-	defaultCORSOrigin    = "http://127.0.0.1:5500"
-	defaultGRPCPort      = "9090"
+	defaultMongoHost     = "mongo"
+	defaultMongoPort     = "27017"
 )
 
 func main() {
@@ -46,6 +48,10 @@ func main() {
 		redisPort      = envString("REDIS_PORT", defaultRedisPort)
 		reddisPassword = requireEnv("REDIS_PASSWORD", logger)
 		redisDatabase  = envString("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
+		mongoHost      = envString("MONGO_HOST", defaultMongoHost)
+		mongoPort      = envString("MONGO_PORT", defaultMongoPort)
+		mongoUsername  = requireEnv("MONGO_INITDB_ROOT_USERNAME", logger)
+		mongoPassword  = requireEnv("MONGO_INITDB_ROOT_PASSWORD", logger)
 		corsOrigin     = envString("CORS_ORIGIN", defaultCORSOrigin)
 	)
 
@@ -66,6 +72,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/", mongoUsername, mongoPassword, mongoHost, mongoPort)
+	mongoService, err := persist.NewMongoService(mongoURI)
+	if err != nil {
+		logger.Log("exit", "Failed to create mongo service", "error", err)
+		os.Exit(1)
+	}
+
 	var (
 		corsConfig = &transport.CorsOptions{
 			Origin:           corsOrigin,                                                                                                  // Allow only specified origin
@@ -74,7 +87,7 @@ func main() {
 			ExposeHeaders:    []string{"Content-Type", "Authorization", "X-Refresh-Token"},                                                // Allow any headers to be exposed
 			AllowCredentials: false,                                                                                                       // Allow credentials to be included
 		}
-		redisService = redis.NewService(
+		redisService = persist.NewRedisService(
 			fmt.Sprintf("%s:%s", redisHost, redisPort),
 			reddisPassword, redisDB,
 		)
@@ -120,7 +133,7 @@ func main() {
 		g.Add(func() error {
 			logger.Log("transport", "gRPC", "addr", grpcAddr)
 			return baseServer.Serve(grpcListener)
-		}, func(error) {
+		}, func(err error) {
 			logger.Log("exit", "shutting down GRPC server", "error", err)
 			baseServer.Stop()
 		})
@@ -130,7 +143,7 @@ func main() {
 		// redis
 		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
-			ticker := time.NewTicker(30 * time.Second)
+			ticker := time.NewTicker(10 * time.Second)
 			defer ticker.Stop()
 			for {
 				select {
@@ -138,7 +151,7 @@ func main() {
 					_, err := redisService.Ping(ctx)
 					if err != nil {
 						logger.Log("service", "Redis", "status", "disconnected", "error", err)
-						return nil
+						return err
 					} else {
 						logger.Log("service", "Redis", "status", "healthy")
 					}
@@ -146,9 +159,39 @@ func main() {
 					return nil
 				}
 			}
-		}, func(error) {
+		}, func(err error) {
 			cancel()
-			redisService.Close()
+			logger.Log("exit", "closing redis client", "error", err)
+			_ = redisService.Close()
+		})
+	}
+
+	{
+		// mongo
+		ctx, cancel := context.WithCancel(context.Background())
+		g.Add(func() error {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ticker.C:
+					err := mongoService.Ping(ctx)
+					if err != nil {
+						logger.Log("service", "Mongo", "status", "disconnected", "error", err)
+						return err
+					} else {
+						logger.Log("service", "Mongo", "status", "healthy")
+					}
+				case <-ctx.Done():
+					return nil
+				}
+			}
+		}, func(err error) {
+			cancel()
+			logger.Log("exit", "disconnecting mongo client", "error", err)
+			ctx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancelTimeout()
+			_ = mongoService.Disconnect(ctx)
 		})
 	}
 
@@ -160,7 +203,7 @@ func main() {
 			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 			select {
 			case sig := <-c:
-				return fmt.Errorf("received signal %s", sig)
+				return logger.Log("received signal", sig)
 			case <-cancelInterrupt:
 				return nil
 			}
@@ -168,6 +211,7 @@ func main() {
 			close(cancelInterrupt)
 		})
 	}
+
 	logger.Log("exit", g.Run())
 }
 

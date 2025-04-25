@@ -11,3 +11,5 @@ data:
   REDIS_HOST: redis-service
   REDIS_PORT: "6379"
   REDIS_DATABASE_GOVERNANCE: "0"
+  MONGO_HOST: mongo-service
+  MONGO_PORT: "27017"

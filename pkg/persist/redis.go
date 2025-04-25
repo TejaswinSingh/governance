@@ -1,4 +1,4 @@
-package redis
+package persist
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type RedisService struct {
 	client *redis.Client
 }
 
-func NewService(addr, password string, db int) *RedisService {
+func NewRedisService(addr, password string, db int) *RedisService {
 	return &RedisService{
 		client: redis.NewClient(&redis.Options{
 			Addr:     addr,
