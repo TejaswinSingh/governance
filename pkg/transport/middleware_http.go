@@ -59,7 +59,7 @@ func JWTAuthMiddleware(secretKey string, redisService *persist.RedisService, cas
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			claims jwt.MapClaims
-			err    *myerrors.ServiceError
+			err    error
 		)
 
 		// authentication
@@ -81,7 +81,7 @@ func JWTAuthMiddleware(secretKey string, redisService *persist.RedisService, cas
 			}
 			// refresh token
 			var claims2 jwt.MapClaims
-			var err2 *myerrors.ServiceError
+			var err2 error
 			r, claims2, err2 = extractAndVerifyToken(r, redisService, secretKey, "refresh")
 			if err2 != nil {
 				encodeError(r.Context(), err2, w)
@@ -120,7 +120,7 @@ func JWTAuthMiddleware(secretKey string, redisService *persist.RedisService, cas
 }
 
 // helpers
-func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, *myerrors.ServiceError) {
+func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, error) {
 	if tokenType == "refresh" {
 		token, err := getTokenFromHeader(r, "X-Refresh-Token")
 		if err != nil {

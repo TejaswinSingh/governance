@@ -6,13 +6,19 @@ import (
 )
 
 type ServiceError struct {
-	HTTPCode  int    `json:"-"`
-	ErrorCode string `json:"errorCode"`
-	Message   string `json:"message"`
+	InternalErr error  `json:"-"`
+	HTTPCode    int    `json:"-"`
+	ErrorCode   string `json:"errorCode"`
+	Message     string `json:"message"`
 }
 
 func (e *ServiceError) Error() string {
 	return fmt.Sprintf("%s: %s", e.ErrorCode, e.Message)
+}
+
+func (e *ServiceError) SetInternalErr(err error) *ServiceError {
+	e.InternalErr = err
+	return e
 }
 
 func NewServiceError(httpCode int, errorCode, message string) *ServiceError {

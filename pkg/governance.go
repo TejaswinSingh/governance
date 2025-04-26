@@ -22,11 +22,11 @@ func NewService(secretKey string, redisService *persist.RedisService) Service {
 	return &governanceService{secretKey: secretKey, redisService: redisService}
 }
 
-func (s *governanceService) ServiceStatus(_ context.Context) (int, *errors.ServiceError) {
+func (s *governanceService) ServiceStatus(_ context.Context) (int, error) {
 	return http.StatusOK, nil
 }
 
-func (s *governanceService) Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, err *errors.ServiceError) {
+func (s *governanceService) Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, err error) {
 	if username == "" || password == "" {
 		return "", "", errors.ErrMissingCreds
 	}
@@ -48,7 +48,7 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 	}
 }
 
-func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) *errors.ServiceError {
+func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) error {
 	// add the access-token to blacklist
 	err := auth.BlacklistToken(ctx, s.redisService, tokenAccess, claimsAccess)
 	if err != nil {
@@ -64,7 +64,7 @@ func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefres
 	return nil
 }
 
-func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string, claimsRefresh jwt.MapClaims) (tokenAccess, tokenRefresh string, err *errors.ServiceError) {
+func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string, claimsRefresh jwt.MapClaims) (tokenAccess, tokenRefresh string, err error) {
 	// add the current refresh-token to blacklist
 	err = auth.BlacklistToken(ctx, s.redisService, curTokenRefresh, claimsRefresh)
 	if err != nil {
@@ -87,9 +87,10 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	return tokenAccess, tokenRefresh, nil
 }
 
-func (s *governanceService) ValidateToken(ctx context.Context, token string) (int, *errors.ServiceError) {
+func (s *governanceService) ValidateToken(ctx context.Context, token string) (int, error) {
 	_, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
 	if err != nil {
+		err, _ := err.(*errors.ServiceError)
 		return err.HTTPCode, err
 	}
 	return http.StatusOK, nil

@@ -39,23 +39,21 @@ func (r *RedisService) Close() error {
 	return nil
 }
 
-func (r *RedisService) Set(ctx context.Context, key string, value any, expiration time.Duration) *errors.ServiceError {
+func (r *RedisService) Set(ctx context.Context, key string, value any, expiration time.Duration) error {
 	err := r.client.Set(ctx, key, value, expiration).Err()
 	if err != nil {
-		logger.Log("Error", err.Error())
-		return errors.ErrRedis
+		return errors.ErrRedis.SetInternalErr(err)
 	}
 	return nil
 }
 
-func (r *RedisService) Get(ctx context.Context, key string) (string, *errors.ServiceError) {
+func (r *RedisService) Get(ctx context.Context, key string) (string, error) {
 	val, err := r.client.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
-			return "", errors.ErrRedisKeyNotExist
+			return "", errors.ErrRedisKeyNotExist.SetInternalErr(err)
 		}
-		logger.Log("Error", err.Error())
-		return "", errors.ErrRedis
+		return "", errors.ErrRedis.SetInternalErr(err)
 	}
 	return val, nil
 }

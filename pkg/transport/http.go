@@ -110,7 +110,11 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 	var serviceErr *governanceErrors.ServiceError
 	if errors.As(err, &serviceErr) {
-		logger.Log("Error", serviceErr.Error())
+		if serviceErr.InternalErr != nil {
+			logger.Log("Error", serviceErr.Error(), "Internal Error", serviceErr.InternalErr.Error())
+		} else {
+			logger.Log("Error", serviceErr.Error())
+		}
 		w.WriteHeader(serviceErr.HTTPCode)
 		json.NewEncoder(w).Encode(serviceErr)
 		return
@@ -118,8 +122,8 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 	// default to internal server error if it is unknown
 	// but still log the original error
-	logger.Log("Error", err.Error())
 	error := governanceErrors.ErrInternalServer
+	logger.Log("Error", error.Error(), "Internal Error", err.Error())
 	w.WriteHeader(error.HTTPCode)
 	json.NewEncoder(w).Encode(error)
 }

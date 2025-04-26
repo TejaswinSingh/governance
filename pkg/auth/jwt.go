@@ -16,7 +16,7 @@ const (
 	refreshTokenExpiry = time.Hour * 24 * 15 // 15 days
 )
 
-func CreateToken(username, secretKey, tokenType string, now time.Time) (string, *errors.ServiceError) {
+func CreateToken(username, secretKey, tokenType string, now time.Time) (string, error) {
 	var exp time.Duration
 	if tokenType == "access" {
 		exp = accessTokenExpiry
@@ -34,7 +34,7 @@ func CreateToken(username, secretKey, tokenType string, now time.Time) (string, 
 
 	tokenString, err := claims.SignedString([]byte(secretKey))
 	if err != nil {
-		return "", errors.ErrCreateJWT
+		return "", errors.ErrCreateJWT.SetInternalErr(err)
 	}
 
 	return tokenString, nil
@@ -47,7 +47,7 @@ func ExtractToken(authHeader string) string {
 	return authHeader
 }
 
-func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, *errors.ServiceError) {
+func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, error) {
 	if tokenString == "" {
 		return nil, errors.ErrInvalidToken
 	}
@@ -97,11 +97,11 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 	}
 
 	// validate that token is not blacklisted
-	val, err_ := redisService.Get(ctx, tokenString)
-	if err_ != nil && err_ != errors.ErrRedisKeyNotExist {
-		return nil, err_
+	val, err := redisService.Get(ctx, tokenString)
+	if err != nil && err != errors.ErrRedisKeyNotExist {
+		return nil, err
 	}
-	if err_ == nil && val == "blacklisted" {
+	if err == nil && val == "blacklisted" {
 		return nil, errors.ErrInvalidToken
 	}
 
@@ -120,7 +120,7 @@ func CompareJWTClaims(c1, c2 jwt.MapClaims, keys ...string) bool {
 	return true
 }
 
-func BlacklistToken(ctx context.Context, redisService *persist.RedisService, token string, claims jwt.MapClaims) *errors.ServiceError {
+func BlacklistToken(ctx context.Context, redisService *persist.RedisService, token string, claims jwt.MapClaims) error {
 	expTime, ok := claims["exp"].(float64)
 	if !ok {
 		return errors.ErrInvalidClaims

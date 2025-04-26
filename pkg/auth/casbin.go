@@ -26,15 +26,13 @@ func NewService() (*CasbinService, error) {
 	}, nil
 }
 
-func (csb *CasbinService) CheckPermission(sub, obj, act string) (bool, *errors.ServiceError) {
+func (csb *CasbinService) CheckPermission(sub, obj, act string) (bool, error) {
 	if err := csb.enforcer.LoadPolicy(); err != nil {
-		logger.Log("err", err.Error(), "where", "casbin.CheckPermission")
-		return false, errors.ErrCasbinPolicyLoad
+		return false, errors.ErrCasbinPolicyLoad.SetInternalErr(err)
 	}
 	eft, err := csb.enforcer.Enforce(sub, obj, act)
 	if err != nil {
-		logger.Log("err", err.Error(), "where", "casbin.CheckPermission")
-		return false, errors.ErrCasbinEnforcement
+		return false, errors.ErrCasbinEnforcement.SetInternalErr(err)
 	}
 	return eft, nil
 }
