@@ -68,6 +68,10 @@ paths:
                   err:
                     type: string
                     nullable: true
+                  metadata:
+                    type: object
+                    description: user metadata
+                    additionalProperties: true
         "400":
           description: Bad request (missing or invalid credentials)
         "401":
@@ -123,6 +127,10 @@ paths:
                   err:
                     type: string
                     nullable: true
+                  metadata:
+                    type: object
+                    description: user metadata
+                    additionalProperties: true
         "400":
           description: Bad request
         "401":

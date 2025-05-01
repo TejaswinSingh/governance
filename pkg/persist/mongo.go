@@ -2,7 +2,10 @@ package persist
 
 import (
 	"context"
+	"errors"
+	"time"
 
+	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -13,7 +16,7 @@ type MongoService struct {
 
 func NewMongoService(uri string) (*MongoService, error) {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)
+	opts := options.Client().SetTimeout(5 * time.Second).ApplyURI(uri).SetServerAPIOptions(serverAPI)
 	client, err := mongo.Connect(opts)
 	if err != nil {
 		return nil, err
@@ -37,4 +40,19 @@ func (m *MongoService) Disconnect(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (m *MongoService) GetCollection(db, coll string) *mongo.Collection {
+	return m.client.Database(db).Collection(coll)
+}
+
+func (m *MongoService) FindOne(ctx context.Context, coll *mongo.Collection, filter any) (*mongo.SingleResult, error) {
+	res := coll.FindOne(ctx, filter)
+	if err := res.Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, err
+		}
+		return nil, myerrors.ErrMongo.SetInternalErr(err)
+	}
+	return res, nil
 }

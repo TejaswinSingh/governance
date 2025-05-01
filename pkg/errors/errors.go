@@ -40,6 +40,12 @@ var (
 	ErrRedisStopped     = NewServiceError(http.StatusInternalServerError, "REDIS_STOPPED", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 	ErrRedisKeyNotExist = NewServiceError(http.StatusNotFound, "REDIS_KEY_NOT_FOUND", "The requested key does not exist in Redis.")
 
+	// mongo errors
+	ErrMongo = NewServiceError(http.StatusInternalServerError, "MONGO_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
+
+	// meta data errors
+	ErrMetaData = NewServiceError(http.StatusInternalServerError, "METADATA_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
+
 	// auth-N errors
 	ErrInvalidCreds      = NewServiceError(http.StatusUnauthorized, "INVALID_CREDENTIALS", "The provided username or password is incorrect. Please check your credentials and try again.")
 	ErrMissingCreds      = NewServiceError(http.StatusUnauthorized, "MISSING_CREDENTIALS", "Username and password are required fields. Please provide both and try again.")

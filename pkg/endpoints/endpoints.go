@@ -41,13 +41,14 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(LoginRequest)
-		tokenAccess, tokenRefresh, err := svc.Login(ctx, req.Username, req.Password)
+		tokenAccess, tokenRefresh, mdata, err := svc.Login(ctx, req.Username, req.Password)
 		if err != nil {
 			return nil, err
 		}
 		return LoginResponse{
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
+			MetaData:     mdata,
 			Err:          nil}, nil
 	}
 }
@@ -66,13 +67,14 @@ func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(RefreshRequest)
-		tokenAccess, tokenRefresh, err := svc.Refresh(ctx, req.TokenRefresh, req.ClaimsRefresh)
+		tokenAccess, tokenRefresh, mdata, err := svc.Refresh(ctx, req.TokenRefresh, req.ClaimsRefresh)
 		if err != nil {
 			return nil, err
 		}
 		return RefreshResponse{
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
+			MetaData:     mdata,
 			Err:          nil}, nil
 	}
 }

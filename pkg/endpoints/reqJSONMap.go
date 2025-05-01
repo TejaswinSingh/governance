@@ -2,6 +2,7 @@ package endpoints
 
 import (
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type ServiceStatusRequest struct{}
@@ -15,9 +16,10 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 type LoginResponse struct {
-	TokenAccess  string `json:"-"`
-	TokenRefresh string `json:"-"`
-	Err          error  `json:"err,omitempty"`
+	TokenAccess  string  `json:"-"`
+	TokenRefresh string  `json:"-"`
+	MetaData     *bson.M `json:"metadata,omitempty"`
+	Err          error   `json:"err,omitempty"`
 }
 
 func (l LoginResponse) GetAccessToken() string  { return l.TokenAccess }
@@ -38,9 +40,10 @@ type RefreshRequest struct {
 	ClaimsRefresh jwt.MapClaims
 }
 type RefreshResponse struct {
-	TokenAccess  string `json:"-"`
-	TokenRefresh string `json:"-"`
-	Err          error  `json:"err,omitempty"`
+	TokenAccess  string  `json:"-"`
+	TokenRefresh string  `json:"-"`
+	MetaData     *bson.M `json:"metadata,omitempty"`
+	Err          error   `json:"err,omitempty"`
 }
 
 func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }

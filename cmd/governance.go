@@ -91,7 +91,7 @@ func main() {
 			fmt.Sprintf("%s:%s", redisHost, redisPort),
 			reddisPassword, redisDB,
 		)
-		service     = governance.NewService(secretKey, redisService)
+		service     = governance.NewService(secretKey, redisService, mongoService)
 		eps         = endpoints.NewEndpointSet(service)
 		httpHandler = transport.NewHTTPHandler(eps, secretKey, corsConfig, redisService, casbinService)
 		grpcServer  = transport.NewGRPCServer(eps)
