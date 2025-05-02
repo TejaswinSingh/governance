@@ -12,6 +12,7 @@ require (
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	go.mongodb.org/mongo-driver/v2 v2.2.0
+	github.com/google/uuid v1.6.0
 )
 
 require (
