@@ -16,7 +16,7 @@ const (
 	refreshTokenExpiry = time.Hour * 24 * 15 // 15 days
 )
 
-func CreateToken(username, secretKey, tokenType string, now time.Time) (string, error) {
+func CreateToken(id, role, secretKey, tokenType string, now time.Time) (string, error) {
 	var exp time.Duration
 	if tokenType == "access" {
 		exp = accessTokenExpiry
@@ -24,12 +24,12 @@ func CreateToken(username, secretKey, tokenType string, now time.Time) (string, 
 		exp = refreshTokenExpiry
 	}
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"type": tokenType,            // Type of token
-		"sub":  username,             // Subject (user identifier)
-		"iss":  "governance-service", // Issuer
-		"aud":  getRole(username),    // Audience (user role)
-		"exp":  now.Add(exp).Unix(),  // Expiration time
-		"iat":  now.Unix(),           // Issued at
+		"type": tokenType,             // Type of token
+		"sub":  id,                    // Subject (user identifier)
+		"iss":  "resolyte.governance", // Issuer
+		"aud":  role,                  // Audience (user role)
+		"exp":  now.Add(exp).Unix(),   // Expiration time
+		"iat":  now.Unix(),            // Issued at
 	})
 
 	tokenString, err := claims.SignedString([]byte(secretKey))
@@ -85,8 +85,10 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 	}
 
 	// validate token subject
-	username, ok := claims["sub"].(string)
-	if !ok || username == "" {
+	// TODO: more thorough validation of subject by either
+	// querying mongodb or the query-engine service
+	sub, ok := claims["sub"].(string)
+	if !ok || sub == "" {
 		return nil, errors.ErrInvalidClaims
 	}
 
@@ -131,14 +133,6 @@ func BlacklistToken(ctx context.Context, redisService *persist.RedisService, tok
 		return err
 	}
 	return nil
-}
-
-func getRole(username string) string {
-	// TODO: implement proper role fetching
-	if username == "admin" {
-		return "admin"
-	}
-	return "parent"
 }
 
 var logger log.Logger

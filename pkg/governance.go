@@ -45,19 +45,22 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 		return fail(errors.ErrInvalidCreds)
 	}
 
+	// TODO: get user id and role from db
+	id := "0334ded6-047f-4c90-9e7f-05d84c94b530"
+	role := username
+
 	// create tokens
 	now := time.Now()
-	tokenAccess, err = auth.CreateToken(username, s.secretKey, "access", now)
+	tokenAccess, err = auth.CreateToken(id, role, s.secretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh", now)
+	tokenRefresh, err = auth.CreateToken(id, role, s.secretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
 
 	// fetch metadata
-	id := "f3f8be14-517f-4514-b712-f61046aad21b" // TODO: get user id from db
 	mdata, err = s.fetchMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
@@ -96,19 +99,19 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	// TODO: blacklist all access tokens issued with this refresh token
 
 	// create new tokens
-	username, _ := claimsRefresh["sub"].(string)
+	id, _ := claimsRefresh["sub"].(string)
+	role, _ := claimsRefresh["aud"].(string)
 	now := time.Now()
-	tokenAccess, err = auth.CreateToken(username, s.secretKey, "access", now)
+	tokenAccess, err = auth.CreateToken(id, role, s.secretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err = auth.CreateToken(username, s.secretKey, "refresh", now)
+	tokenRefresh, err = auth.CreateToken(id, role, s.secretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
 
 	// fetch metadata
-	id := "f3f8be14-517f-4514-b712-f61046aad21b" // TODO: get user id from claims or db
 	mdata, err = s.fetchMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
