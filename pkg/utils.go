@@ -54,7 +54,7 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 }
 
 func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*bson.M, error) {
-	db := "resolyte"
+	db := "metadata"
 	collUsers := s.mongoService.GetCollection(db, "users")
 	collStudents := s.mongoService.GetCollection(db, "students")
 	collVehicles := s.mongoService.GetCollection(db, "vehicles")
