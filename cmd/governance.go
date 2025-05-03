@@ -66,16 +66,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	casbinService, err := auth.NewService()
-	if err != nil {
-		logger.Log("exit", "Failed to create casbin service", "error", err)
-		os.Exit(1)
-	}
-
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/", mongoUsername, mongoPassword, mongoHost, mongoPort)
 	mongoService, err := persist.NewMongoService(mongoURI)
 	if err != nil {
 		logger.Log("exit", "Failed to create mongo service", "error", err)
+		os.Exit(1)
+	}
+
+	casbinService, err := auth.NewService(mongoURI)
+	if err != nil {
+		logger.Log("exit", "Failed to create casbin service", "error", err)
 		os.Exit(1)
 	}
 
@@ -192,6 +192,26 @@ func main() {
 			ctx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancelTimeout()
 			_ = mongoService.Disconnect(ctx)
+		})
+	}
+
+	{
+		// casbin
+		g.Add(func() error {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				err := casbinService.LoadPolicy()
+				if err != nil {
+					logger.Log("service", "Casbin", "policy", "not-reloaded", "error", err)
+					return err
+				} else {
+					logger.Log("service", "Casbin", "policy", "reloaded")
+				}
+			}
+			return nil
+		}, func(err error) {
+			logger.Log("exit", "stopping casbin service", "error", err)
 		})
 	}
 

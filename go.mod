@@ -4,6 +4,7 @@ go 1.24.2
 
 require (
 	github.com/casbin/casbin/v2 v2.104.0
+	github.com/casbin/mongodb-adapter/v3 v3.7.0
 	github.com/go-kit/kit v0.13.0
 	github.com/go-kit/log v0.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -11,6 +12,7 @@ require (
 	github.com/redis/go-redis/v9 v9.7.3
 	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
+	go.mongodb.org/mongo-driver v1.17.3
 	go.mongodb.org/mongo-driver/v2 v2.2.0
 	github.com/google/uuid v1.6.0
 )
@@ -23,6 +25,7 @@ require (
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
