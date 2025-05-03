@@ -89,6 +89,14 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*
 			return nil, err
 		}
 
+		// convert binary UUIDs to string
+		if uuidStr, ok := uuidBinToString(studDoc["_id"]); ok {
+			studDoc["_id"] = uuidStr
+		}
+		if uuidStr, ok := uuidBinToString(studDoc["parent_id"]); ok {
+			studDoc["parent_id"] = uuidStr
+		}
+
 		// Check if student has opted for surveillance
 		hasSurveillance, ok := studDoc["has_surveillance"].(bool)
 		if !ok {
@@ -131,14 +139,6 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*
 				return nil, err
 			}
 			routeDocs = append(routeDocs, routeDoc)
-		}
-
-		// convert binary UUIDs to string
-		if uuidStr, ok := uuidBinToString(studDoc["_id"]); ok {
-			studDoc["_id"] = uuidStr
-		}
-		if uuidStr, ok := uuidBinToString(studDoc["parent_id"]); ok {
-			studDoc["parent_id"] = uuidStr
 		}
 
 		// replace ids with embedded documents
