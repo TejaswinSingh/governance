@@ -10,11 +10,14 @@ import (
 )
 
 type Set struct {
+	// http endpoints
 	ServiceStatusEndpoint endpoint.Endpoint
 	LoginEndpoint         endpoint.Endpoint
 	LogoutEndpoint        endpoint.Endpoint
 	RefreshEndpoint       endpoint.Endpoint
+	// grpc endpoints
 	ValidateTokenEndpoint endpoint.Endpoint
+	AuthorizeEndpoint     endpoint.Endpoint
 }
 
 func NewEndpointSet(svc governance.Service) Set {
@@ -24,6 +27,7 @@ func NewEndpointSet(svc governance.Service) Set {
 		LogoutEndpoint:        MakeLogoutEndpoint(svc),
 		RefreshEndpoint:       MakeRefreshEndpoint(svc),
 		ValidateTokenEndpoint: MakeValidateTokenEndpoint(svc),
+		AuthorizeEndpoint:     MakeAuthorizeEndpoint(svc),
 	}
 }
 
@@ -86,6 +90,17 @@ func MakeValidateTokenEndpoint(svc governance.Service) endpoint.Endpoint {
 		// for grpc-only endpoints, pass
 		// errors inside the response struct
 		return ValidateTokenResponse{
+			Code: code,
+			Err:  err}, nil
+	}
+}
+
+func MakeAuthorizeEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(AuthorizeRequest)
+		eft, code, err := svc.Authorize(ctx, req.Token, req.Obj, req.Act)
+		return AuthorizeResponse{
+			Eft:  eft,
 			Code: code,
 			Err:  err}, nil
 	}

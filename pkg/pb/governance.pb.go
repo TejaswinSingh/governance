@@ -205,6 +205,126 @@ func (x *ValidateTokenResponse) GetErr() string {
 	return ""
 }
 
+type AuthorizeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Obj           string                 `protobuf:"bytes,2,opt,name=obj,proto3" json:"obj,omitempty"`
+	Act           string                 `protobuf:"bytes,3,opt,name=act,proto3" json:"act,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthorizeRequest) Reset() {
+	*x = AuthorizeRequest{}
+	mi := &file_pkg_pb_governance_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthorizeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthorizeRequest) ProtoMessage() {}
+
+func (x *AuthorizeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_pb_governance_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthorizeRequest.ProtoReflect.Descriptor instead.
+func (*AuthorizeRequest) Descriptor() ([]byte, []int) {
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AuthorizeRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
+func (x *AuthorizeRequest) GetObj() string {
+	if x != nil {
+		return x.Obj
+	}
+	return ""
+}
+
+func (x *AuthorizeRequest) GetAct() string {
+	if x != nil {
+		return x.Act
+	}
+	return ""
+}
+
+type AuthorizeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Eft           bool                   `protobuf:"varint,1,opt,name=eft,proto3" json:"eft,omitempty"`
+	Code          int64                  `protobuf:"varint,2,opt,name=code,proto3" json:"code,omitempty"`
+	Err           string                 `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthorizeResponse) Reset() {
+	*x = AuthorizeResponse{}
+	mi := &file_pkg_pb_governance_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthorizeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthorizeResponse) ProtoMessage() {}
+
+func (x *AuthorizeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_pb_governance_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthorizeResponse.ProtoReflect.Descriptor instead.
+func (*AuthorizeResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AuthorizeResponse) GetEft() bool {
+	if x != nil {
+		return x.Eft
+	}
+	return false
+}
+
+func (x *AuthorizeResponse) GetCode() int64 {
+	if x != nil {
+		return x.Code
+	}
+	return 0
+}
+
+func (x *AuthorizeResponse) GetErr() string {
+	if x != nil {
+		return x.Err
+	}
+	return ""
+}
+
 var File_pkg_pb_governance_proto protoreflect.FileDescriptor
 
 const file_pkg_pb_governance_proto_rawDesc = "" +
@@ -218,11 +338,20 @@ const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"=\n" +
 	"\x15ValidateTokenResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\x03R\x04code\x12\x10\n" +
-	"\x03err\x18\x02 \x01(\tR\x03err2\xc8\x01\n" +
+	"\x03err\x18\x02 \x01(\tR\x03err\"L\n" +
+	"\x10AuthorizeRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x10\n" +
+	"\x03obj\x18\x02 \x01(\tR\x03obj\x12\x10\n" +
+	"\x03act\x18\x03 \x01(\tR\x03act\"K\n" +
+	"\x11AuthorizeResponse\x12\x10\n" +
+	"\x03eft\x18\x01 \x01(\bR\x03eft\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\x03R\x04code\x12\x10\n" +
+	"\x03err\x18\x03 \x01(\tR\x03err2\x9a\x02\n" +
 	"\n" +
 	"Governance\x12\\\n" +
 	"\rServiceStatus\x12#.governance_pb.ServiceStatusRequest\x1a$.governance_pb.ServiceStatusResponse\"\x00\x12\\\n" +
-	"\rValidateToken\x12#.governance_pb.ValidateTokenRequest\x1a$.governance_pb.ValidateTokenResponse\"\x00B8Z6github.com/Resolyte-official/service-governance/pkg/pbb\x06proto3"
+	"\rValidateToken\x12#.governance_pb.ValidateTokenRequest\x1a$.governance_pb.ValidateTokenResponse\"\x00\x12P\n" +
+	"\tAuthorize\x12\x1f.governance_pb.AuthorizeRequest\x1a .governance_pb.AuthorizeResponse\"\x00B8Z6github.com/Resolyte-official/service-governance/pkg/pbb\x06proto3"
 
 var (
 	file_pkg_pb_governance_proto_rawDescOnce sync.Once
@@ -236,20 +365,24 @@ func file_pkg_pb_governance_proto_rawDescGZIP() []byte {
 	return file_pkg_pb_governance_proto_rawDescData
 }
 
-var file_pkg_pb_governance_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_pkg_pb_governance_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_pb_governance_proto_goTypes = []any{
 	(*ServiceStatusRequest)(nil),  // 0: governance_pb.ServiceStatusRequest
 	(*ServiceStatusResponse)(nil), // 1: governance_pb.ServiceStatusResponse
 	(*ValidateTokenRequest)(nil),  // 2: governance_pb.ValidateTokenRequest
 	(*ValidateTokenResponse)(nil), // 3: governance_pb.ValidateTokenResponse
+	(*AuthorizeRequest)(nil),      // 4: governance_pb.AuthorizeRequest
+	(*AuthorizeResponse)(nil),     // 5: governance_pb.AuthorizeResponse
 }
 var file_pkg_pb_governance_proto_depIdxs = []int32{
 	0, // 0: governance_pb.Governance.ServiceStatus:input_type -> governance_pb.ServiceStatusRequest
 	2, // 1: governance_pb.Governance.ValidateToken:input_type -> governance_pb.ValidateTokenRequest
-	1, // 2: governance_pb.Governance.ServiceStatus:output_type -> governance_pb.ServiceStatusResponse
-	3, // 3: governance_pb.Governance.ValidateToken:output_type -> governance_pb.ValidateTokenResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
+	4, // 2: governance_pb.Governance.Authorize:input_type -> governance_pb.AuthorizeRequest
+	1, // 3: governance_pb.Governance.ServiceStatus:output_type -> governance_pb.ServiceStatusResponse
+	3, // 4: governance_pb.Governance.ValidateToken:output_type -> governance_pb.ValidateTokenResponse
+	5, // 5: governance_pb.Governance.Authorize:output_type -> governance_pb.AuthorizeResponse
+	3, // [3:6] is the sub-list for method output_type
+	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -266,7 +399,7 @@ func file_pkg_pb_governance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_pb_governance_proto_rawDesc), len(file_pkg_pb_governance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

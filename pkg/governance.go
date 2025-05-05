@@ -15,16 +15,18 @@ import (
 )
 
 type governanceService struct {
-	secretKey    string
-	redisService *persist.RedisService
-	mongoService *persist.MongoService
+	secretKey     string
+	redisService  *persist.RedisService
+	mongoService  *persist.MongoService
+	casbinService *auth.CasbinService
 }
 
-func NewService(secretKey string, redisService *persist.RedisService, mongoService *persist.MongoService) Service {
+func NewService(secretKey string, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
 	return &governanceService{
-		secretKey:    secretKey,
-		redisService: redisService,
-		mongoService: mongoService,
+		secretKey:     secretKey,
+		redisService:  redisService,
+		mongoService:  mongoService,
+		casbinService: casbinService,
 	}
 }
 
@@ -127,6 +129,30 @@ func (s *governanceService) ValidateToken(ctx context.Context, token string) (in
 		return err.HTTPCode, err
 	}
 	return http.StatusOK, nil
+}
+
+func (s *governanceService) Authorize(ctx context.Context, token, obj, act string) (bool, int, error) {
+	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
+	if err != nil {
+		err, _ := err.(*errors.ServiceError)
+		return false, err.HTTPCode, err
+	}
+
+	// Note: sub here refers to the subject in Casbin's model definition,
+	// and not the sub in jwt claims
+	sub, _ := claims["aud"].(string)
+
+	eft, err := s.casbinService.CheckPermission(sub, obj, act)
+	if err != nil {
+		err, _ := err.(*errors.ServiceError)
+		return false, err.HTTPCode, err
+	}
+
+	if !eft {
+		return eft, errors.ErrAccessDenied.HTTPCode, errors.ErrAccessDenied
+	}
+
+	return eft, http.StatusOK, nil
 }
 
 var logger log.Logger

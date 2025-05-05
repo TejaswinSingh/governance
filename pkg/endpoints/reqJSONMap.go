@@ -56,3 +56,14 @@ type ValidateTokenResponse struct {
 	Code int
 	Err  error
 }
+
+type AuthorizeRequest struct {
+	Token string
+	Obj   string
+	Act   string
+}
+type AuthorizeResponse struct {
+	Eft  bool
+	Code int
+	Err  error
+}

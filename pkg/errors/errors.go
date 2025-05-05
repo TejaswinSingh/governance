@@ -46,6 +46,9 @@ var (
 	// meta data errors
 	ErrMetaData = NewServiceError(http.StatusInternalServerError, "METADATA_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 
+	// grpc errors
+	ErrGRPCBadRequest = NewServiceError(http.StatusBadRequest, "GRPC_BAD_REQUEST", "Missing required fields in gRPC request.")
+
 	// auth-N errors
 	ErrInvalidCreds      = NewServiceError(http.StatusUnauthorized, "INVALID_CREDENTIALS", "The provided username or password is incorrect. Please check your credentials and try again.")
 	ErrMissingCreds      = NewServiceError(http.StatusUnauthorized, "MISSING_CREDENTIALS", "Username and password are required fields. Please provide both and try again.")

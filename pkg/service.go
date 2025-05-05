@@ -22,4 +22,5 @@ type Service interface {
 	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) error
 	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, err error)
 	ValidateToken(ctx context.Context, token string) (int, error)
+	Authorize(ctx context.Context, token, obj, act string) (bool, int, error)
 }

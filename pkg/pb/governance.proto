@@ -7,6 +7,7 @@ option go_package = "github.com/Resolyte-official/service-governance/pkg/pb";
 service Governance {
     rpc ServiceStatus (ServiceStatusRequest) returns (ServiceStatusResponse) {}
     rpc ValidateToken (ValidateTokenRequest) returns (ValidateTokenResponse) {}
+    rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
 }
 
 message ServiceStatusRequest {}
@@ -22,4 +23,15 @@ message ValidateTokenResponse {
     int64 code = 1;
     string err = 2;
     // in future, we can send claims like sub, aud, iat etc
+}
+
+message AuthorizeRequest {
+    string token = 1;
+    string obj = 2;
+    string act = 3;
+}
+message AuthorizeResponse {
+    bool eft = 1;
+    int64 code = 2;
+    string err = 3;
 }
