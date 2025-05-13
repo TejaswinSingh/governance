@@ -197,20 +197,26 @@ func main() {
 
 	{
 		// casbin
+		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
 			ticker := time.NewTicker(10 * time.Second)
 			defer ticker.Stop()
-			for range ticker.C {
-				err := casbinService.LoadPolicy()
-				if err != nil {
-					logger.Log("service", "Casbin", "policy", "not-reloaded", "error", err)
-					return err
-				} else {
-					logger.Log("service", "Casbin", "policy", "reloaded")
+			for {
+				select {
+				case <-ticker.C:
+					err := casbinService.LoadPolicy()
+					if err != nil {
+						logger.Log("service", "Casbin", "policy", "not-reloaded", "error", err)
+						return err
+					} else {
+						logger.Log("service", "Casbin", "policy", "reloaded")
+					}
+				case <-ctx.Done():
+					return nil
 				}
 			}
-			return nil
 		}, func(err error) {
+			cancel()
 			logger.Log("exit", "stopping casbin service", "error", err)
 		})
 	}
