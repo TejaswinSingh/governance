@@ -21,6 +21,14 @@ func (e *ServiceError) SetInternalErr(err error) *ServiceError {
 	return e
 }
 
+func (e *ServiceError) DetailedError() string {
+	if e.InternalErr != nil {
+		return fmt.Sprintf("%s: %s [Internal Error: %s]", e.ErrorCode, e.Message, e.InternalErr.Error())
+	} else {
+		return fmt.Sprintf("%s: %s", e.ErrorCode, e.Message)
+	}
+}
+
 func NewServiceError(httpCode int, errorCode, message string) *ServiceError {
 	return &ServiceError{HTTPCode: httpCode, ErrorCode: errorCode, Message: message}
 }

@@ -2,6 +2,8 @@ package transport
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
@@ -39,26 +41,35 @@ func NewGRPCServer(ep endpoints.Set) pb.GovernanceServer {
 }
 
 func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusRequest) (*pb.ServiceStatusResponse, error) {
+	rpc := "ServiceStatus"
 	_, resp, err := g.serviceStatus.ServeGRPC(ctx, r)
 	if err != nil {
-		return nil, err
+		logError(rpc, r, err)
+		return nil, toGrpcError(err)
 	}
+	logResponse(rpc, r, resp)
 	return resp.(*pb.ServiceStatusResponse), nil
 }
 
 func (g *grpcServer) ValidateToken(ctx context.Context, r *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
+	rpc := "ValidateToken"
 	_, resp, err := g.validateToken.ServeGRPC(ctx, r)
 	if err != nil {
-		return nil, err
+		logError(rpc, r, err)
+		return nil, toGrpcError(err)
 	}
+	logResponse(rpc, r, resp)
 	return resp.(*pb.ValidateTokenResponse), nil
 }
 
 func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb.AuthorizeResponse, error) {
+	rpc := "Authorize"
 	_, resp, err := g.authorize.ServeGRPC(ctx, r)
 	if err != nil {
-		return nil, err
+		logError(rpc, r, err)
+		return nil, toGrpcError(err)
 	}
+	logResponse(rpc, r, resp)
 	return resp.(*pb.AuthorizeResponse), nil
 }
 
@@ -69,7 +80,7 @@ func decodeGRPCServiceStatusRequest(ctx context.Context, grpcReq any) (any, erro
 func decodeGRPCValidateTokenRequest(ctx context.Context, grpcReq any) (any, error) {
 	req := grpcReq.(*pb.ValidateTokenRequest)
 	if req.Token == "" {
-		return nil, toGRPCError(myerrors.ErrGRPCBadRequest)
+		return nil, myerrors.ErrGRPCBadRequest
 	}
 	return endpoints.ValidateTokenRequest{Token: req.Token}, nil
 }
@@ -77,7 +88,7 @@ func decodeGRPCValidateTokenRequest(ctx context.Context, grpcReq any) (any, erro
 func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
 	req := grpcReq.(*pb.AuthorizeRequest)
 	if req.Token == "" || req.Act == "" || req.Obj == "" {
-		return nil, toGRPCError(myerrors.ErrGRPCBadRequest)
+		return nil, myerrors.ErrGRPCBadRequest
 	}
 	return endpoints.AuthorizeRequest{
 		Token: req.Token,
@@ -123,7 +134,26 @@ func encodeGRPCAuthorizeResponse(ctx context.Context, grpcResp any) (any, error)
 	}, nil
 }
 
-func toGRPCError(err error) error {
+func logResponse(rpc string, req, resp any) {
+	logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "RESPONSE", fmt.Sprintf("%+v", resp))
+}
+
+func logError(rpc string, req any, err error) {
+	var serviceErr *myerrors.ServiceError
+	if errors.As(err, &serviceErr) {
+		logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "ERROR", serviceErr.DetailedError())
+		return
+	}
+
+	// default to internal server error if it is unknown
+	// and log the original error internally
+	defErr := myerrors.ErrInternalServer
+	logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "ERROR", fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error()))
+}
+
+func toGrpcError(err error) error {
+
+	// Convert to standard gRPC error
 	if svcErr, ok := err.(*myerrors.ServiceError); ok {
 		switch svcErr.HTTPCode {
 		case 400:

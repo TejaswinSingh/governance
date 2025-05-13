@@ -2,9 +2,11 @@ package endpoints
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
+	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/log"
 )
@@ -87,8 +89,12 @@ func MakeValidateTokenEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(ValidateTokenRequest)
 		code, err := svc.ValidateToken(ctx, req.Token)
-		// for grpc-only endpoints, pass
-		// errors inside the response struct
+		// fatal errors
+		if errors.Is(err, myerrors.ErrRedis) {
+			return nil, err
+		}
+		// for grpc-only endpoints, pass non-fatal
+		// errors inside the response
 		return ValidateTokenResponse{
 			Code: code,
 			Err:  err}, nil
@@ -99,6 +105,10 @@ func MakeAuthorizeEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(AuthorizeRequest)
 		eft, code, err := svc.Authorize(ctx, req.Token, req.Obj, req.Act)
+		// fatal errors
+		if errors.Is(err, myerrors.ErrRedis) || errors.Is(err, myerrors.ErrCasbinEnforcement) {
+			return nil, err
+		}
 		return AuthorizeResponse{
 			Eft:  eft,
 			Code: code,
