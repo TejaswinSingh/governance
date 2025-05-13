@@ -7,8 +7,7 @@ import (
 
 type ServiceStatusRequest struct{}
 type ServiceStatusResponse struct {
-	Code int   `json:"status"`
-	Err  error `json:"err,omitempty"`
+	Code int `json:"status"`
 }
 
 type LoginRequest struct {
@@ -19,7 +18,6 @@ type LoginResponse struct {
 	TokenAccess  string  `json:"-"`
 	TokenRefresh string  `json:"-"`
 	MetaData     *bson.M `json:"metadata,omitempty"`
-	Err          error   `json:"err,omitempty"`
 }
 
 func (l LoginResponse) GetAccessToken() string  { return l.TokenAccess }
@@ -31,9 +29,7 @@ type LogoutRequest struct {
 	ClaimsAccess  jwt.MapClaims
 	ClaimsRefresh jwt.MapClaims
 }
-type LogoutResponse struct {
-	Err error `json:"err,omitempty"`
-}
+type LogoutResponse struct{}
 
 type RefreshRequest struct {
 	TokenRefresh  string
@@ -43,7 +39,6 @@ type RefreshResponse struct {
 	TokenAccess  string  `json:"-"`
 	TokenRefresh string  `json:"-"`
 	MetaData     *bson.M `json:"metadata,omitempty"`
-	Err          error   `json:"err,omitempty"`
 }
 
 func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }

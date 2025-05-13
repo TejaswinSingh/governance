@@ -40,7 +40,7 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		return ServiceStatusResponse{Code: code, Err: nil}, nil
+		return ServiceStatusResponse{Code: code}, nil
 	}
 }
 
@@ -55,7 +55,7 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
 			MetaData:     mdata,
-			Err:          nil}, nil
+		}, nil
 	}
 }
 
@@ -66,7 +66,7 @@ func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		return LogoutResponse{Err: nil}, nil
+		return LogoutResponse{}, nil
 	}
 }
 
@@ -81,7 +81,7 @@ func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
 			MetaData:     mdata,
-			Err:          nil}, nil
+		}, nil
 	}
 }
 

@@ -13,7 +13,6 @@ service Governance {
 message ServiceStatusRequest {}
 message ServiceStatusResponse {
     int64 code = 1;
-    string err = 2;
 }
 
 message ValidateTokenRequest {

@@ -60,7 +60,6 @@ func (*ServiceStatusRequest) Descriptor() ([]byte, []int) {
 type ServiceStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Code          int64                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
-	Err           string                 `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -100,13 +99,6 @@ func (x *ServiceStatusResponse) GetCode() int64 {
 		return x.Code
 	}
 	return 0
-}
-
-func (x *ServiceStatusResponse) GetErr() string {
-	if x != nil {
-		return x.Err
-	}
-	return ""
 }
 
 type ValidateTokenRequest struct {
@@ -330,10 +322,9 @@ var File_pkg_pb_governance_proto protoreflect.FileDescriptor
 const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\n" +
 	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"\x16\n" +
-	"\x14ServiceStatusRequest\"=\n" +
+	"\x14ServiceStatusRequest\"+\n" +
 	"\x15ServiceStatusResponse\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\x03R\x04code\x12\x10\n" +
-	"\x03err\x18\x02 \x01(\tR\x03err\",\n" +
+	"\x04code\x18\x01 \x01(\x03R\x04code\",\n" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\"=\n" +
 	"\x15ValidateTokenResponse\x12\x12\n" +

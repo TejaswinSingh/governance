@@ -99,13 +99,8 @@ func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
 
 func encodeGRPCServiceStatusResponse(ctx context.Context, grpcResp any) (any, error) {
 	resp := grpcResp.(endpoints.ServiceStatusResponse)
-	var err string
-	if resp.Err != nil {
-		err = resp.Err.Error()
-	}
 	return &pb.ServiceStatusResponse{
 		Code: int64(resp.Code),
-		Err:  err,
 	}, nil
 }
 
