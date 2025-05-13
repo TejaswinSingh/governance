@@ -20,7 +20,7 @@ import (
 func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/governance/healthz", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
@@ -34,14 +34,14 @@ func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions,
 		httptransport.ServerErrorEncoder(encodeError),
 	), "POST")))
 
-	m.Handle("/auth/logout", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/logout", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST")))
 
-	m.Handle("/auth/refresh", CORSMiddleware(corsConfig, AllowMethods(JWTAuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/refresh", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,

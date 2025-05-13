@@ -55,7 +55,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func JWTAuthMiddleware(secretKey string, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
+func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			claims jwt.MapClaims
