@@ -12,14 +12,14 @@ service Governance {
 
 message ServiceStatusRequest {}
 message ServiceStatusResponse {
-    int64 code = 1;
+    int64 status = 1;
 }
 
 message ValidateTokenRequest {
     string token = 1;
 }
 message ValidateTokenResponse {
-    int64 code = 1;
+    int64 status = 1;
     string err = 2;
     // in future, we can send claims like sub, aud, iat etc
 }
@@ -31,6 +31,6 @@ message AuthorizeRequest {
 }
 message AuthorizeResponse {
     bool eft = 1;
-    int64 code = 2;
+    int64 status = 2;
     string err = 3;
 }

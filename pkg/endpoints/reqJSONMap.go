@@ -58,8 +58,8 @@ type ValidateTokenRequest struct {
 	Token string
 }
 type ValidateTokenResponse struct {
-	Code int
-	Err  error
+	Status int
+	Err    error
 }
 
 type AuthorizeRequest struct {
@@ -68,7 +68,7 @@ type AuthorizeRequest struct {
 	Act   string
 }
 type AuthorizeResponse struct {
-	Eft  bool
-	Code int
-	Err  error
+	Eft    bool
+	Status int
+	Err    error
 }

@@ -59,7 +59,7 @@ func (*ServiceStatusRequest) Descriptor() ([]byte, []int) {
 
 type ServiceStatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          int64                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Status        int64                  `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -94,9 +94,9 @@ func (*ServiceStatusResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ServiceStatusResponse) GetCode() int64 {
+func (x *ServiceStatusResponse) GetStatus() int64 {
 	if x != nil {
-		return x.Code
+		return x.Status
 	}
 	return 0
 }
@@ -147,7 +147,7 @@ func (x *ValidateTokenRequest) GetToken() string {
 
 type ValidateTokenResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          int64                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Status        int64                  `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Err           string                 `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"` // in future, we can send claims like sub, aud, iat etc
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -183,9 +183,9 @@ func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ValidateTokenResponse) GetCode() int64 {
+func (x *ValidateTokenResponse) GetStatus() int64 {
 	if x != nil {
-		return x.Code
+		return x.Status
 	}
 	return 0
 }
@@ -260,7 +260,7 @@ func (x *AuthorizeRequest) GetAct() string {
 type AuthorizeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Eft           bool                   `protobuf:"varint,1,opt,name=eft,proto3" json:"eft,omitempty"`
-	Code          int64                  `protobuf:"varint,2,opt,name=code,proto3" json:"code,omitempty"`
+	Status        int64                  `protobuf:"varint,2,opt,name=status,proto3" json:"status,omitempty"`
 	Err           string                 `protobuf:"bytes,3,opt,name=err,proto3" json:"err,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -303,9 +303,9 @@ func (x *AuthorizeResponse) GetEft() bool {
 	return false
 }
 
-func (x *AuthorizeResponse) GetCode() int64 {
+func (x *AuthorizeResponse) GetStatus() int64 {
 	if x != nil {
-		return x.Code
+		return x.Status
 	}
 	return 0
 }
@@ -322,21 +322,21 @@ var File_pkg_pb_governance_proto protoreflect.FileDescriptor
 const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\n" +
 	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"\x16\n" +
-	"\x14ServiceStatusRequest\"+\n" +
-	"\x15ServiceStatusResponse\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\x03R\x04code\",\n" +
+	"\x14ServiceStatusRequest\"/\n" +
+	"\x15ServiceStatusResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\x03R\x06status\",\n" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"=\n" +
-	"\x15ValidateTokenResponse\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\x03R\x04code\x12\x10\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"A\n" +
+	"\x15ValidateTokenResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\x03R\x06status\x12\x10\n" +
 	"\x03err\x18\x02 \x01(\tR\x03err\"L\n" +
 	"\x10AuthorizeRequest\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x10\n" +
 	"\x03obj\x18\x02 \x01(\tR\x03obj\x12\x10\n" +
-	"\x03act\x18\x03 \x01(\tR\x03act\"K\n" +
+	"\x03act\x18\x03 \x01(\tR\x03act\"O\n" +
 	"\x11AuthorizeResponse\x12\x10\n" +
-	"\x03eft\x18\x01 \x01(\bR\x03eft\x12\x12\n" +
-	"\x04code\x18\x02 \x01(\x03R\x04code\x12\x10\n" +
+	"\x03eft\x18\x01 \x01(\bR\x03eft\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\x03R\x06status\x12\x10\n" +
 	"\x03err\x18\x03 \x01(\tR\x03err2\x9a\x02\n" +
 	"\n" +
 	"Governance\x12\\\n" +

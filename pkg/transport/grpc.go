@@ -100,7 +100,7 @@ func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
 func encodeGRPCServiceStatusResponse(ctx context.Context, grpcResp any) (any, error) {
 	resp := grpcResp.(endpoints.ServiceStatusResponse)
 	return &pb.ServiceStatusResponse{
-		Code: int64(resp.Status),
+		Status: int64(resp.Status),
 	}, nil
 }
 
@@ -111,8 +111,8 @@ func encodeGRPCValidateTokenResponse(ctx context.Context, grpcResp any) (any, er
 		err = resp.Err.Error()
 	}
 	return &pb.ValidateTokenResponse{
-		Code: int64(resp.Code),
-		Err:  err,
+		Status: int64(resp.Status),
+		Err:    err,
 	}, nil
 }
 
@@ -123,9 +123,9 @@ func encodeGRPCAuthorizeResponse(ctx context.Context, grpcResp any) (any, error)
 		err = resp.Err.Error()
 	}
 	return &pb.AuthorizeResponse{
-		Eft:  resp.Eft,
-		Code: int64(resp.Code),
-		Err:  err,
+		Eft:    resp.Eft,
+		Status: int64(resp.Status),
+		Err:    err,
 	}, nil
 }
 
