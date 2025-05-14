@@ -34,9 +34,9 @@ func (s *governanceService) ServiceStatus(_ context.Context) (int, error) {
 	return http.StatusOK, nil
 }
 
-func (s *governanceService) Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, mdata *bson.M, err error) {
-	fail := func(err error) (string, string, *bson.M, error) {
-		return "", "", nil, err
+func (s *governanceService) Login(ctx context.Context, username, password string) (string, string, *bson.M, int, error) {
+	fail := func(err error) (string, string, *bson.M, int, error) {
+		return "", "", nil, 0, err
 	}
 
 	if username == "" || password == "" {
@@ -53,47 +53,47 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 
 	// create tokens
 	now := time.Now()
-	tokenAccess, err = auth.CreateToken(id, role, s.secretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.secretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err = auth.CreateToken(id, role, s.secretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.secretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
 
 	// fetch metadata
-	mdata, err = s.fetchMetaData(ctx, id)
+	mdata, err := s.fetchMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
 	}
 
-	return tokenAccess, tokenRefresh, mdata, nil
+	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
 }
 
-func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) error {
+func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error) {
 	// add access-token to blacklist
 	err := auth.BlacklistToken(ctx, s.redisService, tokenAccess, claimsAccess)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// add refresh-token to blacklist
 	err = auth.BlacklistToken(ctx, s.redisService, tokenRefresh, claimsRefresh)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	return nil
+	return http.StatusNoContent, nil
 }
 
-func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string, claimsRefresh jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, err error) {
-	fail := func(err error) (string, string, *bson.M, error) {
-		return "", "", nil, err
+func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string, claimsRefresh jwt.MapClaims) (string, string, *bson.M, int, error) {
+	fail := func(err error) (string, string, *bson.M, int, error) {
+		return "", "", nil, 0, err
 	}
 
 	// add the current refresh-token to blacklist
-	err = auth.BlacklistToken(ctx, s.redisService, curTokenRefresh, claimsRefresh)
+	err := auth.BlacklistToken(ctx, s.redisService, curTokenRefresh, claimsRefresh)
 	if err != nil {
 		return fail(err)
 	}
@@ -104,22 +104,22 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	id, _ := claimsRefresh["sub"].(string)
 	role, _ := claimsRefresh["aud"].(string)
 	now := time.Now()
-	tokenAccess, err = auth.CreateToken(id, role, s.secretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.secretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err = auth.CreateToken(id, role, s.secretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.secretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
 
 	// fetch metadata
-	mdata, err = s.fetchMetaData(ctx, id)
+	mdata, err := s.fetchMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
 	}
 
-	return tokenAccess, tokenRefresh, mdata, nil
+	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
 }
 
 func (s *governanceService) ValidateToken(ctx context.Context, token string) (int, error) {

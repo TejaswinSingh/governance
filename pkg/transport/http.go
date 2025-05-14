@@ -100,8 +100,20 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 		w.Header().Set("X-Refresh-Token", resp.GetRefreshToken())
 	}
 
+	// write status in header
+	var status int
+	if resp, ok := response.(interface{ GetStatus() int }); ok {
+		status = resp.GetStatus()
+	} else {
+		status = http.StatusOK
+	}
+	w.WriteHeader(status)
+
 	logger.Log("Response", response)
-	w.WriteHeader(http.StatusOK)
+
+	if status == http.StatusNoContent {
+		return nil
+	}
 	return json.NewEncoder(w).Encode(response)
 }
 

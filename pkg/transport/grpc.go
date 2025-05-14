@@ -100,7 +100,7 @@ func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
 func encodeGRPCServiceStatusResponse(ctx context.Context, grpcResp any) (any, error) {
 	resp := grpcResp.(endpoints.ServiceStatusResponse)
 	return &pb.ServiceStatusResponse{
-		Code: int64(resp.Code),
+		Code: int64(resp.Status),
 	}, nil
 }
 

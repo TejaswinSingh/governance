@@ -18,9 +18,9 @@ const (
 
 type Service interface {
 	ServiceStatus(ctx context.Context) (int, error)
-	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, mdata *bson.M, err error)
-	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) error
-	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, err error)
+	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
+	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error)
+	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
 	ValidateToken(ctx context.Context, token string) (int, error)
 	Authorize(ctx context.Context, token, obj, act string) (bool, int, error)
 }

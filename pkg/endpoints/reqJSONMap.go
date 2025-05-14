@@ -7,8 +7,10 @@ import (
 
 type ServiceStatusRequest struct{}
 type ServiceStatusResponse struct {
-	Code int `json:"status"`
+	Status int `json:"status"`
 }
+
+func (r ServiceStatusResponse) GetStatus() int { return r.Status }
 
 type LoginRequest struct {
 	Username string `json:"username"`
@@ -18,10 +20,12 @@ type LoginResponse struct {
 	TokenAccess  string  `json:"-"`
 	TokenRefresh string  `json:"-"`
 	MetaData     *bson.M `json:"metadata,omitempty"`
+	Status       int     `json:"status"`
 }
 
 func (l LoginResponse) GetAccessToken() string  { return l.TokenAccess }
 func (l LoginResponse) GetRefreshToken() string { return l.TokenRefresh }
+func (r LoginResponse) GetStatus() int          { return r.Status }
 
 type LogoutRequest struct {
 	TokenAccess   string
@@ -29,7 +33,11 @@ type LogoutRequest struct {
 	ClaimsAccess  jwt.MapClaims
 	ClaimsRefresh jwt.MapClaims
 }
-type LogoutResponse struct{}
+type LogoutResponse struct {
+	Status int `json:"-"`
+}
+
+func (r LogoutResponse) GetStatus() int { return r.Status }
 
 type RefreshRequest struct {
 	TokenRefresh  string
@@ -39,10 +47,12 @@ type RefreshResponse struct {
 	TokenAccess  string  `json:"-"`
 	TokenRefresh string  `json:"-"`
 	MetaData     *bson.M `json:"metadata,omitempty"`
+	Status       int     `json:"status"`
 }
 
 func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }
 func (r RefreshResponse) GetRefreshToken() string { return r.TokenRefresh }
+func (r RefreshResponse) GetStatus() int          { return r.Status }
 
 type ValidateTokenRequest struct {
 	Token string

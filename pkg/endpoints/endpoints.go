@@ -36,18 +36,18 @@ func NewEndpointSet(svc governance.Service) Set {
 func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		_ = request.(ServiceStatusRequest)
-		code, err := svc.ServiceStatus(ctx)
+		status, err := svc.ServiceStatus(ctx)
 		if err != nil {
 			return nil, err
 		}
-		return ServiceStatusResponse{Code: code}, nil
+		return ServiceStatusResponse{Status: status}, nil
 	}
 }
 
 func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(LoginRequest)
-		tokenAccess, tokenRefresh, mdata, err := svc.Login(ctx, req.Username, req.Password)
+		tokenAccess, tokenRefresh, mdata, status, err := svc.Login(ctx, req.Username, req.Password)
 		if err != nil {
 			return nil, err
 		}
@@ -55,6 +55,7 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
 			MetaData:     mdata,
+			Status:       status,
 		}, nil
 	}
 }
@@ -62,18 +63,18 @@ func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeLogoutEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(LogoutRequest)
-		err := svc.Logout(ctx, req.TokenAccess, req.TokenRefresh, req.ClaimsAccess, req.ClaimsRefresh)
+		status, err := svc.Logout(ctx, req.TokenAccess, req.TokenRefresh, req.ClaimsAccess, req.ClaimsRefresh)
 		if err != nil {
 			return nil, err
 		}
-		return LogoutResponse{}, nil
+		return LogoutResponse{Status: status}, nil
 	}
 }
 
 func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(RefreshRequest)
-		tokenAccess, tokenRefresh, mdata, err := svc.Refresh(ctx, req.TokenRefresh, req.ClaimsRefresh)
+		tokenAccess, tokenRefresh, mdata, status, err := svc.Refresh(ctx, req.TokenRefresh, req.ClaimsRefresh)
 		if err != nil {
 			return nil, err
 		}
@@ -81,6 +82,7 @@ func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 			TokenAccess:  tokenAccess,
 			TokenRefresh: tokenRefresh,
 			MetaData:     mdata,
+			Status:       status,
 		}, nil
 	}
 }
