@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -20,33 +21,33 @@ import (
 func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/governance/healthz", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
-	)), "GET")))
+	)), "GET"))))
 
-	m.Handle("/auth/login", CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	), "POST")))
+	), "POST"))))
 
-	m.Handle("/auth/logout", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/logout", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST")))
+	)), "POST"))))
 
-	m.Handle("/auth/refresh", CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/refresh", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST")))
+	)), "POST"))))
 
 	return m
 }
@@ -109,8 +110,6 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 	}
 	w.WriteHeader(status)
 
-	logger.Log("Response", response)
-
 	if status == http.StatusNoContent {
 		return nil
 	}
@@ -119,14 +118,11 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	rw, _ := w.(*responseWriter) // custom response writer
 
 	var serviceErr *governanceErrors.ServiceError
 	if errors.As(err, &serviceErr) {
-		if serviceErr.InternalErr != nil {
-			logger.Log("Error", serviceErr.Error(), "Internal Error", serviceErr.InternalErr.Error())
-		} else {
-			logger.Log("Error", serviceErr.Error())
-		}
+		rw.err = serviceErr.DetailedError()
 		w.WriteHeader(serviceErr.HTTPCode)
 		json.NewEncoder(w).Encode(serviceErr)
 		return
@@ -134,10 +130,10 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 
 	// default to internal server error if it is unknown
 	// but still log the original error
-	error := governanceErrors.ErrInternalServer
-	logger.Log("Error", error.Error(), "Internal Error", err.Error())
-	w.WriteHeader(error.HTTPCode)
-	json.NewEncoder(w).Encode(error)
+	defErr := governanceErrors.ErrInternalServer
+	rw.err = fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error())
+	w.WriteHeader(defErr.HTTPCode)
+	json.NewEncoder(w).Encode(defErr)
 }
 
 var logger log.Logger

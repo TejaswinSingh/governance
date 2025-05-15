@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
@@ -39,6 +40,43 @@ func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+	err    string
+}
+
+func (rw *responseWriter) WriteHeader(status int) {
+	rw.status = status
+	rw.ResponseWriter.WriteHeader(status)
+}
+
+func LoggingMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now().UTC()
+			rw := &responseWriter{ResponseWriter: w, status: http.StatusOK, err: ""}
+			next.ServeHTTP(rw, r)
+
+			logArgs := []interface{}{
+				"TRANSPORT", "HTTP",
+				"METHOD", r.Method,
+				"PATH", r.URL.Path,
+				"STATUS", rw.status,
+			}
+
+			defer func() {
+				logArgs = append(logArgs, "DURATION", time.Since(start).String())
+				logger.Log(logArgs...)
+			}()
+
+			if rw.err != "" {
+				logArgs = append(logArgs, "ERROR", rw.err)
+			}
+		})
+	}
 }
 
 func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
@@ -105,7 +143,6 @@ func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbin
 		// authorization
 		role, _ := claims["aud"].(string)
 		ok, err := casbinService.CheckPermission(role, r.URL.Path, r.Method)
-		logger.Log("role", role, "path", r.URL.Path, "method", r.Method)
 		if err != nil { // casbin errors
 			encodeError(r.Context(), err, w)
 			return

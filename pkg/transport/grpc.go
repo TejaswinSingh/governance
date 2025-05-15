@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
@@ -40,36 +42,61 @@ func NewGRPCServer(ep endpoints.Set) pb.GovernanceServer {
 	}
 }
 
-func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusRequest) (*pb.ServiceStatusResponse, error) {
-	rpc := "ServiceStatus"
-	_, resp, err := g.serviceStatus.ServeGRPC(ctx, r)
+func loggingMiddleware(ctx context.Context, req any, rpc string, f grpctransport.Handler) (any, error) {
+	start := time.Now().UTC()
+
+	_, resp, err := f.ServeGRPC(ctx, req)
+
+	logArgs := []interface{}{
+		"TRANSPORT", "GRPC",
+		"RPC", rpc,
+	}
+
+	defer func() {
+		logArgs = append(logArgs, "DURATION", time.Since(start).String())
+		logger.Log(logArgs...)
+	}()
+
 	if err != nil {
-		logError(rpc, r, err)
+		var serviceErr *myerrors.ServiceError
+		if errors.As(err, &serviceErr) {
+			logArgs = append(logArgs, "STATUS", serviceErr.HTTPCode, "ERROR", serviceErr.DetailedError())
+		} else {
+			defErr := myerrors.ErrInternalServer
+			logArgs = append(logArgs, "STATUS", defErr.HTTPCode, "ERROR", fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error()))
+		}
 		return nil, toGrpcError(err)
 	}
-	logResponse(rpc, r, resp)
+
+	logArgs = append(logArgs, "STATUS", http.StatusOK)
+
+	return resp, nil
+}
+
+func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusRequest) (*pb.ServiceStatusResponse, error) {
+	rpc := "ServiceStatus"
+	resp, err := loggingMiddleware(ctx, r, rpc, g.serviceStatus)
+	if err != nil {
+		return nil, err
+	}
 	return resp.(*pb.ServiceStatusResponse), nil
 }
 
 func (g *grpcServer) ValidateToken(ctx context.Context, r *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
 	rpc := "ValidateToken"
-	_, resp, err := g.validateToken.ServeGRPC(ctx, r)
+	resp, err := loggingMiddleware(ctx, r, rpc, g.validateToken)
 	if err != nil {
-		logError(rpc, r, err)
-		return nil, toGrpcError(err)
+		return nil, err
 	}
-	logResponse(rpc, r, resp)
 	return resp.(*pb.ValidateTokenResponse), nil
 }
 
 func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb.AuthorizeResponse, error) {
 	rpc := "Authorize"
-	_, resp, err := g.authorize.ServeGRPC(ctx, r)
+	resp, err := loggingMiddleware(ctx, r, rpc, g.authorize)
 	if err != nil {
-		logError(rpc, r, err)
-		return nil, toGrpcError(err)
+		return nil, err
 	}
-	logResponse(rpc, r, resp)
 	return resp.(*pb.AuthorizeResponse), nil
 }
 
@@ -127,23 +154,6 @@ func encodeGRPCAuthorizeResponse(ctx context.Context, grpcResp any) (any, error)
 		Status: int64(resp.Status),
 		Err:    err,
 	}, nil
-}
-
-func logResponse(rpc string, req, resp any) {
-	logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "RESPONSE", fmt.Sprintf("%+v", resp))
-}
-
-func logError(rpc string, req any, err error) {
-	var serviceErr *myerrors.ServiceError
-	if errors.As(err, &serviceErr) {
-		logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "ERROR", serviceErr.DetailedError())
-		return
-	}
-
-	// default to internal server error if it is unknown
-	// and log the original error internally
-	defErr := myerrors.ErrInternalServer
-	logger.Log("TRANSPORT", "GRPC", "RPC", rpc, "REQUEST", fmt.Sprintf("%+v", req), "ERROR", fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error()))
 }
 
 func toGrpcError(err error) error {
