@@ -58,6 +58,7 @@ type AuthenticateRequest struct {
 	Token string
 }
 type AuthenticateResponse struct {
+	Claims string
 	Status int
 	Err    error
 }
@@ -69,6 +70,7 @@ type AuthorizeRequest struct {
 }
 type AuthorizeResponse struct {
 	Eft    bool
+	Claims string
 	Status int
 	Err    error
 }

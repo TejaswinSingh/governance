@@ -90,14 +90,15 @@ func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeAuthenticateEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(AuthenticateRequest)
-		status, err := svc.Authenticate(ctx, req.Token)
+		claims, status, err := svc.Authenticate(ctx, req.Token)
 		// fatal errors
-		if errors.Is(err, myerrors.ErrRedis) {
+		if errors.Is(err, myerrors.ErrRedis) || errors.Is(err, myerrors.ErrInternalServer) {
 			return nil, err
 		}
 		// for grpc-only endpoints, pass non-fatal
 		// errors inside the response
 		return AuthenticateResponse{
+			Claims: claims,
 			Status: status,
 			Err:    err,
 		}, nil
@@ -107,13 +108,14 @@ func MakeAuthenticateEndpoint(svc governance.Service) endpoint.Endpoint {
 func MakeAuthorizeEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(AuthorizeRequest)
-		eft, status, err := svc.Authorize(ctx, req.Token, req.Obj, req.Act)
+		eft, claims, status, err := svc.Authorize(ctx, req.Token, req.Obj, req.Act)
 		// fatal errors
-		if errors.Is(err, myerrors.ErrRedis) || errors.Is(err, myerrors.ErrCasbinEnforcement) {
+		if errors.Is(err, myerrors.ErrRedis) || errors.Is(err, myerrors.ErrCasbinEnforcement) || errors.Is(err, myerrors.ErrInternalServer) {
 			return nil, err
 		}
 		return AuthorizeResponse{
 			Eft:    eft,
+			Claims: claims,
 			Status: status,
 			Err:    err,
 		}, nil
