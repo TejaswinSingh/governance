@@ -101,27 +101,27 @@ func (x *ServiceStatusResponse) GetStatus() int64 {
 	return 0
 }
 
-type ValidateTokenRequest struct {
+type AuthenticateRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ValidateTokenRequest) Reset() {
-	*x = ValidateTokenRequest{}
+func (x *AuthenticateRequest) Reset() {
+	*x = AuthenticateRequest{}
 	mi := &file_pkg_pb_governance_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ValidateTokenRequest) String() string {
+func (x *AuthenticateRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateTokenRequest) ProtoMessage() {}
+func (*AuthenticateRequest) ProtoMessage() {}
 
-func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_pb_governance_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -133,19 +133,19 @@ func (x *ValidateTokenRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateTokenRequest.ProtoReflect.Descriptor instead.
-func (*ValidateTokenRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateRequest.ProtoReflect.Descriptor instead.
+func (*AuthenticateRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ValidateTokenRequest) GetToken() string {
+func (x *AuthenticateRequest) GetToken() string {
 	if x != nil {
 		return x.Token
 	}
 	return ""
 }
 
-type ValidateTokenResponse struct {
+type AuthenticateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        int64                  `protobuf:"varint,1,opt,name=status,proto3" json:"status,omitempty"`
 	Err           string                 `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"` // in future, we can send claims like sub, aud, iat etc
@@ -153,20 +153,20 @@ type ValidateTokenResponse struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ValidateTokenResponse) Reset() {
-	*x = ValidateTokenResponse{}
+func (x *AuthenticateResponse) Reset() {
+	*x = AuthenticateResponse{}
 	mi := &file_pkg_pb_governance_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ValidateTokenResponse) String() string {
+func (x *AuthenticateResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateTokenResponse) ProtoMessage() {}
+func (*AuthenticateResponse) ProtoMessage() {}
 
-func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
+func (x *AuthenticateResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_pb_governance_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -178,19 +178,19 @@ func (x *ValidateTokenResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateTokenResponse.ProtoReflect.Descriptor instead.
-func (*ValidateTokenResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use AuthenticateResponse.ProtoReflect.Descriptor instead.
+func (*AuthenticateResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ValidateTokenResponse) GetStatus() int64 {
+func (x *AuthenticateResponse) GetStatus() int64 {
 	if x != nil {
 		return x.Status
 	}
 	return 0
 }
 
-func (x *ValidateTokenResponse) GetErr() string {
+func (x *AuthenticateResponse) GetErr() string {
 	if x != nil {
 		return x.Err
 	}
@@ -324,10 +324,10 @@ const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"\x16\n" +
 	"\x14ServiceStatusRequest\"/\n" +
 	"\x15ServiceStatusResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\x03R\x06status\",\n" +
-	"\x14ValidateTokenRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"A\n" +
-	"\x15ValidateTokenResponse\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\x03R\x06status\"+\n" +
+	"\x13AuthenticateRequest\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"@\n" +
+	"\x14AuthenticateResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\x03R\x06status\x12\x10\n" +
 	"\x03err\x18\x02 \x01(\tR\x03err\"L\n" +
 	"\x10AuthorizeRequest\x12\x14\n" +
@@ -337,11 +337,11 @@ const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\x11AuthorizeResponse\x12\x10\n" +
 	"\x03eft\x18\x01 \x01(\bR\x03eft\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\x03R\x06status\x12\x10\n" +
-	"\x03err\x18\x03 \x01(\tR\x03err2\x9a\x02\n" +
+	"\x03err\x18\x03 \x01(\tR\x03err2\x97\x02\n" +
 	"\n" +
 	"Governance\x12\\\n" +
-	"\rServiceStatus\x12#.governance_pb.ServiceStatusRequest\x1a$.governance_pb.ServiceStatusResponse\"\x00\x12\\\n" +
-	"\rValidateToken\x12#.governance_pb.ValidateTokenRequest\x1a$.governance_pb.ValidateTokenResponse\"\x00\x12P\n" +
+	"\rServiceStatus\x12#.governance_pb.ServiceStatusRequest\x1a$.governance_pb.ServiceStatusResponse\"\x00\x12Y\n" +
+	"\fAuthenticate\x12\".governance_pb.AuthenticateRequest\x1a#.governance_pb.AuthenticateResponse\"\x00\x12P\n" +
 	"\tAuthorize\x12\x1f.governance_pb.AuthorizeRequest\x1a .governance_pb.AuthorizeResponse\"\x00B8Z6github.com/Resolyte-official/service-governance/pkg/pbb\x06proto3"
 
 var (
@@ -360,17 +360,17 @@ var file_pkg_pb_governance_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_pb_governance_proto_goTypes = []any{
 	(*ServiceStatusRequest)(nil),  // 0: governance_pb.ServiceStatusRequest
 	(*ServiceStatusResponse)(nil), // 1: governance_pb.ServiceStatusResponse
-	(*ValidateTokenRequest)(nil),  // 2: governance_pb.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil), // 3: governance_pb.ValidateTokenResponse
+	(*AuthenticateRequest)(nil),   // 2: governance_pb.AuthenticateRequest
+	(*AuthenticateResponse)(nil),  // 3: governance_pb.AuthenticateResponse
 	(*AuthorizeRequest)(nil),      // 4: governance_pb.AuthorizeRequest
 	(*AuthorizeResponse)(nil),     // 5: governance_pb.AuthorizeResponse
 }
 var file_pkg_pb_governance_proto_depIdxs = []int32{
 	0, // 0: governance_pb.Governance.ServiceStatus:input_type -> governance_pb.ServiceStatusRequest
-	2, // 1: governance_pb.Governance.ValidateToken:input_type -> governance_pb.ValidateTokenRequest
+	2, // 1: governance_pb.Governance.Authenticate:input_type -> governance_pb.AuthenticateRequest
 	4, // 2: governance_pb.Governance.Authorize:input_type -> governance_pb.AuthorizeRequest
 	1, // 3: governance_pb.Governance.ServiceStatus:output_type -> governance_pb.ServiceStatusResponse
-	3, // 4: governance_pb.Governance.ValidateToken:output_type -> governance_pb.ValidateTokenResponse
+	3, // 4: governance_pb.Governance.Authenticate:output_type -> governance_pb.AuthenticateResponse
 	5, // 5: governance_pb.Governance.Authorize:output_type -> governance_pb.AuthorizeResponse
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type

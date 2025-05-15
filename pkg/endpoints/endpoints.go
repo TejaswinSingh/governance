@@ -18,8 +18,8 @@ type Set struct {
 	LogoutEndpoint        endpoint.Endpoint
 	RefreshEndpoint       endpoint.Endpoint
 	// grpc endpoints
-	ValidateTokenEndpoint endpoint.Endpoint
-	AuthorizeEndpoint     endpoint.Endpoint
+	AuthenticateEndpoint endpoint.Endpoint
+	AuthorizeEndpoint    endpoint.Endpoint
 }
 
 func NewEndpointSet(svc governance.Service) Set {
@@ -28,7 +28,7 @@ func NewEndpointSet(svc governance.Service) Set {
 		LoginEndpoint:         MakeLoginEndpoint(svc),
 		LogoutEndpoint:        MakeLogoutEndpoint(svc),
 		RefreshEndpoint:       MakeRefreshEndpoint(svc),
-		ValidateTokenEndpoint: MakeValidateTokenEndpoint(svc),
+		AuthenticateEndpoint:  MakeAuthenticateEndpoint(svc),
 		AuthorizeEndpoint:     MakeAuthorizeEndpoint(svc),
 	}
 }
@@ -87,17 +87,17 @@ func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 	}
 }
 
-func MakeValidateTokenEndpoint(svc governance.Service) endpoint.Endpoint {
+func MakeAuthenticateEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
-		req := request.(ValidateTokenRequest)
-		status, err := svc.ValidateToken(ctx, req.Token)
+		req := request.(AuthenticateRequest)
+		status, err := svc.Authenticate(ctx, req.Token)
 		// fatal errors
 		if errors.Is(err, myerrors.ErrRedis) {
 			return nil, err
 		}
 		// for grpc-only endpoints, pass non-fatal
 		// errors inside the response
-		return ValidateTokenResponse{
+		return AuthenticateResponse{
 			Status: status,
 			Err:    err,
 		}, nil

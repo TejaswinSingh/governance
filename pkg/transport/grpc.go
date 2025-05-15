@@ -18,7 +18,7 @@ import (
 type grpcServer struct {
 	pb.UnimplementedGovernanceServer
 	serviceStatus grpctransport.Handler
-	validateToken grpctransport.Handler
+	authenticate  grpctransport.Handler
 	authorize     grpctransport.Handler
 }
 
@@ -29,10 +29,10 @@ func NewGRPCServer(ep endpoints.Set) pb.GovernanceServer {
 			decodeGRPCServiceStatusRequest,
 			encodeGRPCServiceStatusResponse,
 		),
-		validateToken: grpctransport.NewServer(
-			ep.ValidateTokenEndpoint,
-			decodeGRPCValidateTokenRequest,
-			encodeGRPCValidateTokenResponse,
+		authenticate: grpctransport.NewServer(
+			ep.AuthenticateEndpoint,
+			decodeGRPCAuthenticateRequest,
+			encodeGRPCAuthenticateResponse,
 		),
 		authorize: grpctransport.NewServer(
 			ep.AuthorizeEndpoint,
@@ -82,13 +82,13 @@ func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusReque
 	return resp.(*pb.ServiceStatusResponse), nil
 }
 
-func (g *grpcServer) ValidateToken(ctx context.Context, r *pb.ValidateTokenRequest) (*pb.ValidateTokenResponse, error) {
-	rpc := "ValidateToken"
-	resp, err := loggingMiddleware(ctx, r, rpc, g.validateToken)
+func (g *grpcServer) Authenticate(ctx context.Context, r *pb.AuthenticateRequest) (*pb.AuthenticateResponse, error) {
+	rpc := "Authenticate"
+	resp, err := loggingMiddleware(ctx, r, rpc, g.authenticate)
 	if err != nil {
 		return nil, err
 	}
-	return resp.(*pb.ValidateTokenResponse), nil
+	return resp.(*pb.AuthenticateResponse), nil
 }
 
 func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb.AuthorizeResponse, error) {
@@ -104,12 +104,12 @@ func decodeGRPCServiceStatusRequest(ctx context.Context, grpcReq any) (any, erro
 	return endpoints.ServiceStatusRequest{}, nil
 }
 
-func decodeGRPCValidateTokenRequest(ctx context.Context, grpcReq any) (any, error) {
-	req := grpcReq.(*pb.ValidateTokenRequest)
+func decodeGRPCAuthenticateRequest(ctx context.Context, grpcReq any) (any, error) {
+	req := grpcReq.(*pb.AuthenticateRequest)
 	if req.Token == "" {
 		return nil, myerrors.ErrGRPCBadRequest
 	}
-	return endpoints.ValidateTokenRequest{Token: req.Token}, nil
+	return endpoints.AuthenticateRequest{Token: req.Token}, nil
 }
 
 func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
@@ -131,13 +131,13 @@ func encodeGRPCServiceStatusResponse(ctx context.Context, grpcResp any) (any, er
 	}, nil
 }
 
-func encodeGRPCValidateTokenResponse(ctx context.Context, grpcResp any) (any, error) {
-	resp := grpcResp.(endpoints.ValidateTokenResponse)
+func encodeGRPCAuthenticateResponse(ctx context.Context, grpcResp any) (any, error) {
+	resp := grpcResp.(endpoints.AuthenticateResponse)
 	var err string
 	if resp.Err != nil {
 		err = resp.Err.Error()
 	}
-	return &pb.ValidateTokenResponse{
+	return &pb.AuthenticateResponse{
 		Status: int64(resp.Status),
 		Err:    err,
 	}, nil

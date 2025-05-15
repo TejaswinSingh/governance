@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Governance_ServiceStatus_FullMethodName = "/governance_pb.Governance/ServiceStatus"
-	Governance_ValidateToken_FullMethodName = "/governance_pb.Governance/ValidateToken"
+	Governance_Authenticate_FullMethodName  = "/governance_pb.Governance/Authenticate"
 	Governance_Authorize_FullMethodName     = "/governance_pb.Governance/Authorize"
 )
 
@@ -29,7 +29,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GovernanceClient interface {
 	ServiceStatus(ctx context.Context, in *ServiceStatusRequest, opts ...grpc.CallOption) (*ServiceStatusResponse, error)
-	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
+	Authenticate(ctx context.Context, in *AuthenticateRequest, opts ...grpc.CallOption) (*AuthenticateResponse, error)
 	Authorize(ctx context.Context, in *AuthorizeRequest, opts ...grpc.CallOption) (*AuthorizeResponse, error)
 }
 
@@ -51,10 +51,10 @@ func (c *governanceClient) ServiceStatus(ctx context.Context, in *ServiceStatusR
 	return out, nil
 }
 
-func (c *governanceClient) ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error) {
+func (c *governanceClient) Authenticate(ctx context.Context, in *AuthenticateRequest, opts ...grpc.CallOption) (*AuthenticateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ValidateTokenResponse)
-	err := c.cc.Invoke(ctx, Governance_ValidateToken_FullMethodName, in, out, cOpts...)
+	out := new(AuthenticateResponse)
+	err := c.cc.Invoke(ctx, Governance_Authenticate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (c *governanceClient) Authorize(ctx context.Context, in *AuthorizeRequest, 
 // for forward compatibility.
 type GovernanceServer interface {
 	ServiceStatus(context.Context, *ServiceStatusRequest) (*ServiceStatusResponse, error)
-	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
+	Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error)
 	Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error)
 	mustEmbedUnimplementedGovernanceServer()
 }
@@ -91,8 +91,8 @@ type UnimplementedGovernanceServer struct{}
 func (UnimplementedGovernanceServer) ServiceStatus(context.Context, *ServiceStatusRequest) (*ServiceStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ServiceStatus not implemented")
 }
-func (UnimplementedGovernanceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateToken not implemented")
+func (UnimplementedGovernanceServer) Authenticate(context.Context, *AuthenticateRequest) (*AuthenticateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Authenticate not implemented")
 }
 func (UnimplementedGovernanceServer) Authorize(context.Context, *AuthorizeRequest) (*AuthorizeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Authorize not implemented")
@@ -136,20 +136,20 @@ func _Governance_ServiceStatus_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Governance_ValidateToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateTokenRequest)
+func _Governance_Authenticate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AuthenticateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GovernanceServer).ValidateToken(ctx, in)
+		return srv.(GovernanceServer).Authenticate(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Governance_ValidateToken_FullMethodName,
+		FullMethod: Governance_Authenticate_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GovernanceServer).ValidateToken(ctx, req.(*ValidateTokenRequest))
+		return srv.(GovernanceServer).Authenticate(ctx, req.(*AuthenticateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -184,8 +184,8 @@ var Governance_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Governance_ServiceStatus_Handler,
 		},
 		{
-			MethodName: "ValidateToken",
-			Handler:    _Governance_ValidateToken_Handler,
+			MethodName: "Authenticate",
+			Handler:    _Governance_Authenticate_Handler,
 		},
 		{
 			MethodName: "Authorize",

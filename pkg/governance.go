@@ -122,7 +122,7 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
 }
 
-func (s *governanceService) ValidateToken(ctx context.Context, token string) (int, error) {
+func (s *governanceService) Authenticate(ctx context.Context, token string) (int, error) {
 	_, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
 	if err != nil {
 		err, _ := err.(*errors.ServiceError)

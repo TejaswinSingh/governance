@@ -54,10 +54,10 @@ func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }
 func (r RefreshResponse) GetRefreshToken() string { return r.TokenRefresh }
 func (r RefreshResponse) GetStatus() int          { return r.Status }
 
-type ValidateTokenRequest struct {
+type AuthenticateRequest struct {
 	Token string
 }
-type ValidateTokenResponse struct {
+type AuthenticateResponse struct {
 	Status int
 	Err    error
 }
