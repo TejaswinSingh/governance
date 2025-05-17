@@ -2,7 +2,6 @@ package governance
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"time"
@@ -123,37 +122,29 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
 }
 
-func (s *governanceService) Authenticate(ctx context.Context, token string) (string, int, error) {
-	fail := func(err error) (string, int, error) {
+func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt.MapClaims, int, error) {
+	fail := func(err error) (jwt.MapClaims, int, error) {
 		svcErr, _ := err.(*errors.ServiceError)
-		return "", svcErr.HTTPCode, err
+		return nil, svcErr.HTTPCode, err
 	}
 
 	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
 	if err != nil {
 		return fail(err)
 	}
-	claimsJSON, err := json.Marshal(claims)
-	if err != nil {
-		return fail(errors.ErrInternalServer.SetInternalErr(err))
-	}
 
-	return string(claimsJSON), http.StatusOK, nil
+	return claims, http.StatusOK, nil
 }
 
-func (s *governanceService) Authorize(ctx context.Context, token, obj, act string) (bool, string, int, error) {
-	fail := func(err error) (bool, string, int, error) {
+func (s *governanceService) Authorize(ctx context.Context, token, obj, act string) (bool, jwt.MapClaims, int, error) {
+	fail := func(err error) (bool, jwt.MapClaims, int, error) {
 		svcErr, _ := err.(*errors.ServiceError)
-		return false, "", svcErr.HTTPCode, err
+		return false, nil, svcErr.HTTPCode, err
 	}
 
 	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
 	if err != nil {
 		return fail(err)
-	}
-	claimsJSON, err := json.Marshal(claims)
-	if err != nil {
-		return fail(errors.ErrInternalServer.SetInternalErr(err))
 	}
 
 	// Note: sub here refers to the subject in Casbin's model definition,
@@ -166,10 +157,10 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 	}
 
 	if !eft {
-		return eft, string(claimsJSON), errors.ErrAccessDenied.HTTPCode, errors.ErrAccessDenied
+		return eft, claims, errors.ErrAccessDenied.HTTPCode, errors.ErrAccessDenied
 	}
 
-	return eft, string(claimsJSON), http.StatusOK, nil
+	return eft, claims, http.StatusOK, nil
 }
 
 var logger log.Logger

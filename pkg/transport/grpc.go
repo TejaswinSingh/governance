@@ -124,7 +124,7 @@ func encodeGRPCAuthenticateResponse(ctx context.Context, grpcResp any) (any, err
 		err = resp.Err.Error()
 	}
 	return &pb.AuthenticateResponse{
-		Claims: resp.Claims,
+		Claims: toPBClaims(resp.Claims),
 		Status: int64(resp.Status),
 		Err:    err,
 	}, nil
@@ -138,7 +138,7 @@ func encodeGRPCAuthorizeResponse(ctx context.Context, grpcResp any) (any, error)
 	}
 	return &pb.AuthorizeResponse{
 		Eft:    resp.Eft,
-		Claims: resp.Claims,
+		Claims: toPBClaims(resp.Claims),
 		Status: int64(resp.Status),
 		Err:    err,
 	}, nil

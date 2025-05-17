@@ -21,6 +21,6 @@ type Service interface {
 	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
 	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error)
 	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
-	Authenticate(ctx context.Context, token string) (claims string, status int, err error)
-	Authorize(ctx context.Context, token, obj, act string) (eft bool, claims string, status int, err error)
+	Authenticate(ctx context.Context, token string) (claims jwt.MapClaims, status int, err error)
+	Authorize(ctx context.Context, token, obj, act string) (eft bool, claims jwt.MapClaims, status int, err error)
 }

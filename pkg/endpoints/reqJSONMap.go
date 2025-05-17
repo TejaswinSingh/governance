@@ -58,7 +58,7 @@ type AuthenticateRequest struct {
 	Token string
 }
 type AuthenticateResponse struct {
-	Claims string
+	Claims jwt.MapClaims
 	Status int
 	Err    error
 }
@@ -70,7 +70,7 @@ type AuthorizeRequest struct {
 }
 type AuthorizeResponse struct {
 	Eft    bool
-	Claims string
+	Claims jwt.MapClaims
 	Status int
 	Err    error
 }

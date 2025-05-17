@@ -10,6 +10,15 @@ service Governance {
     rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
 }
 
+message Claims {
+    string sub = 1;
+    string aud = 2;
+    string iss = 3;
+    int64 iat = 4;
+    int64 exp = 5;
+    string type = 6;
+}
+
 message ServiceStatusRequest {}
 message ServiceStatusResponse {
     int64 status = 1;
@@ -19,7 +28,7 @@ message AuthenticateRequest {
     string token = 1;
 }
 message AuthenticateResponse {
-    string claims = 1;
+    Claims claims = 1;
     int64 status = 2;
     string err = 3;
     // in future, we can send claims like sub, aud, iat etc
@@ -32,7 +41,7 @@ message AuthorizeRequest {
 }
 message AuthorizeResponse {
     bool eft = 1;
-    string claims = 2;
+    Claims claims = 2;
     int64 status = 3;
     string err = 4;
 }

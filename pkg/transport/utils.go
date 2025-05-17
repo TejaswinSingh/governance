@@ -1,8 +1,12 @@
 package transport
 
 import (
+	"encoding/json"
 	"net/http"
 	"reflect"
+
+	"github.com/Resolyte-official/service-governance/pkg/pb"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type ResponseWriter struct {
@@ -58,4 +62,39 @@ func (e *LogEntry) Log() {
 	if len(keyvals) > 0 {
 		_ = logger.Log(keyvals...)
 	}
+}
+
+func toPBClaims(m jwt.MapClaims) *pb.Claims {
+	return &pb.Claims{
+		Sub:  getStringClaim(m, "sub"),
+		Aud:  getStringClaim(m, "aud"),
+		Iss:  getStringClaim(m, "iss"),
+		Iat:  getInt64Claim(m, "iat"),
+		Exp:  getInt64Claim(m, "exp"),
+		Type: getStringClaim(m, "type"),
+	}
+}
+
+func getStringClaim(m jwt.MapClaims, key string) string {
+	if val, ok := m[key]; ok {
+		if s, ok := val.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func getInt64Claim(m jwt.MapClaims, key string) int64 {
+	if val, ok := m[key]; ok {
+		switch v := val.(type) {
+		case float64:
+			return int64(v)
+		case int64:
+			return v
+		case json.Number:
+			i, _ := v.Int64()
+			return i
+		}
+	}
+	return 0
 }
