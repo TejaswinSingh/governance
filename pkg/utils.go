@@ -30,8 +30,8 @@ func uuidBinToString(id any) (string, bool) {
 	return u.String(), true
 }
 
-func bsonDToMap(d bson.D) map[string]interface{} {
-	m := make(map[string]interface{})
+func bsonDToMap(d bson.D) map[string]any {
+	m := make(map[string]any)
 	for _, elem := range d {
 		m[elem.Key] = elem.Value
 	}
