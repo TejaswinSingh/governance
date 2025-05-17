@@ -47,6 +47,17 @@ func ExtractToken(authHeader string) string {
 	return authHeader
 }
 
+func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
+	if err != nil {
+		return nil, errors.ErrInvalidToken.SetInternalErr(err)
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		return claims, nil
+	}
+	return nil, errors.ErrInvalidClaims
+}
+
 func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, error) {
 	if tokenString == "" {
 		return nil, errors.ErrInvalidToken

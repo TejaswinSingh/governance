@@ -42,41 +42,57 @@ func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
 	})
 }
 
-type responseWriter struct {
-	http.ResponseWriter
-	status int
-	err    string
-}
-
-func (rw *responseWriter) WriteHeader(status int) {
-	rw.status = status
-	rw.ResponseWriter.WriteHeader(status)
-}
-
 func LoggingMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
-			rw := &responseWriter{ResponseWriter: w, status: http.StatusOK, err: ""}
+
+			rw := &ResponseWriter{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rw, r)
 
-			logArgs := []interface{}{
-				"TRANSPORT", "HTTP",
-				"METHOD", r.Method,
-				"PATH", r.URL.Path,
-				"STATUS", rw.status,
+			logE := &LogEntry{
+				Transport: "HTTP",
+				Method:    r.Method,
+				Path:      r.URL.Path,
+				RequestID: rw.RequestID,
+				UserID:    rw.UserID,
+				Status:    rw.status,
+				Error:     rw.Err,
+				Duration:  time.Since(start).String(),
 			}
-
-			defer func() {
-				logArgs = append(logArgs, "DURATION", time.Since(start).String())
-				logger.Log(logArgs...)
-			}()
-
-			if rw.err != "" {
-				logArgs = append(logArgs, "ERROR", rw.err)
-			}
+			logE.Log()
 		})
 	}
+}
+
+func TracingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			encodeError(r.Context(), myerrors.ErrMissingRequestID, w)
+			return
+		}
+		rw, _ := w.(*ResponseWriter) // custom response writer
+		rw.RequestID = reqID
+
+		switch r.URL.Path {
+		case "/auth/refresh":
+			if token, err := getTokenFromHeader(r, "X-Refresh-Token"); err == nil {
+				if claims, err := auth.ExtractClaims(token); err == nil {
+					rw.UserID, _ = claims["sub"].(string)
+				}
+			}
+		case "/auth/login":
+			// no token in header
+		default:
+			if token, err := getTokenFromHeader(r, "Authorization"); err == nil {
+				if claims, err := auth.ExtractClaims(token); err == nil {
+					rw.UserID, _ = claims["sub"].(string)
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {

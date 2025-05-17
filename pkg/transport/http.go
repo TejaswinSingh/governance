@@ -21,33 +21,33 @@ import (
 func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/governance/healthz", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
-	)), "GET"))))
+	)), "GET")))))
 
-	m.Handle("/auth/login", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	), "POST"))))
+	), "POST")))))
 
-	m.Handle("/auth/logout", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/logout", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))))
+	)), "POST")))))
 
-	m.Handle("/auth/refresh", LoggingMiddleware()(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/refresh", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))))
+	)), "POST")))))
 
 	return m
 }
@@ -118,11 +118,11 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	rw, _ := w.(*responseWriter) // custom response writer
+	rw, _ := w.(*ResponseWriter) // custom response writer
 
 	var serviceErr *governanceErrors.ServiceError
 	if errors.As(err, &serviceErr) {
-		rw.err = serviceErr.DetailedError()
+		rw.Err = serviceErr.DetailedError()
 		w.WriteHeader(serviceErr.HTTPCode)
 		json.NewEncoder(w).Encode(serviceErr)
 		return
@@ -131,7 +131,7 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	// default to internal server error if it is unknown
 	// but still log the original error
 	defErr := governanceErrors.ErrInternalServer
-	rw.err = fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error())
+	rw.Err = fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error())
 	w.WriteHeader(defErr.HTTPCode)
 	json.NewEncoder(w).Encode(defErr)
 }

@@ -2,16 +2,13 @@ package transport
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -24,58 +21,40 @@ type grpcServer struct {
 
 func NewGRPCServer(ep endpoints.Set) pb.GovernanceServer {
 	return &grpcServer{
-		serviceStatus: grpctransport.NewServer(
+		serviceStatus: grpcLoggingMiddleware("ServiceStatus", grpctransport.NewServer(
 			ep.ServiceStatusEndpoint,
 			decodeGRPCServiceStatusRequest,
 			encodeGRPCServiceStatusResponse,
-		),
-		authenticate: grpctransport.NewServer(
+		)),
+		authenticate: grpcLoggingMiddleware("Authenticate", grpctransport.NewServer(
 			ep.AuthenticateEndpoint,
 			decodeGRPCAuthenticateRequest,
 			encodeGRPCAuthenticateResponse,
-		),
-		authorize: grpctransport.NewServer(
+		)),
+		authorize: grpcLoggingMiddleware("Authorize", grpctransport.NewServer(
 			ep.AuthorizeEndpoint,
 			decodeGRPCAuthorizeRequest,
 			encodeGRPCAuthorizeResponse,
-		),
+		)),
 	}
 }
 
-func loggingMiddleware(ctx context.Context, req any, rpc string, f grpctransport.Handler) (any, error) {
-	start := time.Now().UTC()
-
-	_, resp, err := f.ServeGRPC(ctx, req)
-
-	logArgs := []interface{}{
-		"TRANSPORT", "GRPC",
-		"RPC", rpc,
-	}
-
-	defer func() {
-		logArgs = append(logArgs, "DURATION", time.Since(start).String())
-		logger.Log(logArgs...)
-	}()
-
-	if err != nil {
-		var serviceErr *myerrors.ServiceError
-		if errors.As(err, &serviceErr) {
-			logArgs = append(logArgs, "STATUS", serviceErr.HTTPCode, "ERROR", serviceErr.DetailedError())
-		} else {
-			defErr := myerrors.ErrInternalServer
-			logArgs = append(logArgs, "STATUS", defErr.HTTPCode, "ERROR", fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error()))
+func checkHeader(ctx context.Context) error {
+	var reqID string
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		requestIDs := md.Get("X-Request-ID")
+		if len(requestIDs) > 0 {
+			reqID = requestIDs[0]
 		}
-		return nil, toGrpcError(err)
 	}
-
-	logArgs = append(logArgs, "STATUS", http.StatusOK)
-
-	return resp, nil
+	if reqID == "" {
+		return myerrors.ErrMissingRequestID
+	}
+	return nil
 }
 
 func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusRequest) (*pb.ServiceStatusResponse, error) {
-	rpc := "ServiceStatus"
-	resp, err := loggingMiddleware(ctx, r, rpc, g.serviceStatus)
+	_, resp, err := g.serviceStatus.ServeGRPC(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +62,7 @@ func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusReque
 }
 
 func (g *grpcServer) Authenticate(ctx context.Context, r *pb.AuthenticateRequest) (*pb.AuthenticateResponse, error) {
-	rpc := "Authenticate"
-	resp, err := loggingMiddleware(ctx, r, rpc, g.authenticate)
+	_, resp, err := g.authenticate.ServeGRPC(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +70,7 @@ func (g *grpcServer) Authenticate(ctx context.Context, r *pb.AuthenticateRequest
 }
 
 func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb.AuthorizeResponse, error) {
-	rpc := "Authorize"
-	resp, err := loggingMiddleware(ctx, r, rpc, g.authorize)
+	_, resp, err := g.authorize.ServeGRPC(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -101,10 +78,16 @@ func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb
 }
 
 func decodeGRPCServiceStatusRequest(ctx context.Context, grpcReq any) (any, error) {
+	if err := checkHeader(ctx); err != nil {
+		return nil, err
+	}
 	return endpoints.ServiceStatusRequest{}, nil
 }
 
 func decodeGRPCAuthenticateRequest(ctx context.Context, grpcReq any) (any, error) {
+	if err := checkHeader(ctx); err != nil {
+		return nil, err
+	}
 	req := grpcReq.(*pb.AuthenticateRequest)
 	if req.Token == "" {
 		return nil, myerrors.ErrGRPCBadRequest
@@ -113,6 +96,9 @@ func decodeGRPCAuthenticateRequest(ctx context.Context, grpcReq any) (any, error
 }
 
 func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
+	if err := checkHeader(ctx); err != nil {
+		return nil, err
+	}
 	req := grpcReq.(*pb.AuthorizeRequest)
 	if req.Token == "" || req.Act == "" || req.Obj == "" {
 		return nil, myerrors.ErrGRPCBadRequest

@@ -70,4 +70,7 @@ var (
 	ErrAccessDenied      = NewServiceError(http.StatusForbidden, "ACCESS_DENIED", "You do not have permission to perform this action.")
 	ErrCasbinPolicyLoad  = NewServiceError(http.StatusInternalServerError, "CASBIN_POLICY_LOAD_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 	ErrCasbinEnforcement = NewServiceError(http.StatusInternalServerError, "CASBIN_ENFORCEMENT_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
+
+	// others
+	ErrMissingRequestID = NewServiceError(http.StatusBadRequest, "MISSING_REQUEST_ID", "Please provide a valid X-Request-ID header.")
 )
