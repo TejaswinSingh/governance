@@ -14,6 +14,8 @@ paths:
       summary: Check service health
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Service is running
@@ -33,6 +35,8 @@ paths:
   /auth/login:
     post:
       summary: User login
+      parameters:
+        - $ref: '#/components/parameters/RequestIDHeader'
       requestBody:
         required: true
         content:
@@ -83,6 +87,8 @@ paths:
       security:
         - bearerAuth: []
         - refreshHeaderAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Successfully logged out
@@ -106,6 +112,8 @@ paths:
       summary: Refresh access token
       security:
         - refreshHeaderAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Token refreshed
@@ -148,3 +156,12 @@ components:
       type: apiKey
       in: header
       name: X-Refresh-Token
+
+  parameters:
+    RequestIDHeader:
+      name: X-REQUEST-ID
+      in: header
+      required: true
+      description: Unique request identifier
+      schema:
+        type: string
