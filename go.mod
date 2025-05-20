@@ -6,15 +6,14 @@ require (
 	github.com/casbin/casbin/v2 v2.104.0
 	github.com/casbin/mongodb-adapter/v3 v3.7.0
 	github.com/go-kit/kit v0.13.0
-	github.com/go-kit/log v0.2.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/uuid v1.6.0
 	github.com/oklog/oklog v0.3.2
 	github.com/redis/go-redis/v9 v9.7.3
-	google.golang.org/grpc v1.71.1
-	google.golang.org/protobuf v1.36.6
 	go.mongodb.org/mongo-driver v1.17.3
 	go.mongodb.org/mongo-driver/v2 v2.2.0
-	github.com/google/uuid v1.6.0
+	google.golang.org/grpc v1.71.1
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
@@ -22,6 +21,7 @@ require (
 	github.com/casbin/govaluate v1.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/go-kit/log v0.2.0 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.7 // indirect

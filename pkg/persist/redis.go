@@ -2,11 +2,9 @@ package persist
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/go-kit/log"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -56,11 +54,4 @@ func (r *RedisService) Get(ctx context.Context, key string) (string, error) {
 		return "", errors.ErrRedis.SetInternalErr(err)
 	}
 	return val, nil
-}
-
-var logger log.Logger
-
-func init() {
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 }

@@ -3,13 +3,11 @@ package governance
 import (
 	"context"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
-	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -161,11 +159,4 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 	}
 
 	return eft, claims, http.StatusOK, nil
-}
-
-var logger log.Logger
-
-func init() {
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 }

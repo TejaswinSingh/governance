@@ -3,12 +3,10 @@ package endpoints
 import (
 	"context"
 	"errors"
-	"os"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/log"
 )
 
 type Set struct {
@@ -133,10 +131,3 @@ func MakeAuthorizeEndpoint(svc governance.Service) endpoint.Endpoint {
 // 	}
 // 	return svcStatusResp.Code, nil
 // }
-
-var logger log.Logger
-
-func init() {
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
-}

@@ -2,12 +2,10 @@ package auth
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
-	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -144,11 +142,4 @@ func BlacklistToken(ctx context.Context, redisService *persist.RedisService, tok
 		return err
 	}
 	return nil
-}
-
-var logger log.Logger
-
-func init() {
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 }
