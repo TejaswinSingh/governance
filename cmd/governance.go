@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"reflect"
 	"strconv"
 	"syscall"
 	"time"
@@ -15,12 +15,12 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
+	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
 	"google.golang.org/grpc"
 
-	"github.com/go-kit/log"
 	"github.com/oklog/oklog/pkg/group"
 )
 
@@ -36,60 +36,48 @@ const (
 )
 
 func main() {
-	logger := log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "SERVICE", "GOVERNANCE")
+	lw := logging.NewTextLogWriter(os.Stdout, logging.INFO)
+	mainLogger := logging.NewContextLogger(lw, "Main")
 
 	var (
 		// httpAddr = net.JoinHostPort("localhost", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
 		httpAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort))
 		grpcAddr       = net.JoinHostPort("0.0.0.0", envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort))
 		https          = envString("HTTPS", "false")
-		secretKey      = requireEnv("SECRET_KEY", logger)
+		secretKey      = requireEnv("SECRET_KEY", mainLogger)
 		redisHost      = envString("REDIS_HOST", defaultRedisHost)
 		redisPort      = envString("REDIS_PORT", defaultRedisPort)
-		reddisPassword = requireEnv("REDIS_PASSWORD", logger)
+		reddisPassword = requireEnv("REDIS_PASSWORD", mainLogger)
 		redisDatabase  = envString("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
 		mongoHost      = envString("MONGO_HOST", defaultMongoHost)
 		mongoPort      = envString("MONGO_PORT", defaultMongoPort)
-		mongoUsername  = requireEnv("MONGO_INITDB_ROOT_USERNAME", logger)
-		mongoPassword  = requireEnv("MONGO_INITDB_ROOT_PASSWORD", logger)
+		mongoUsername  = requireEnv("MONGO_INITDB_ROOT_USERNAME", mainLogger)
+		mongoPassword  = requireEnv("MONGO_INITDB_ROOT_PASSWORD", mainLogger)
 		corsOrigin     = envString("CORS_ORIGIN", defaultCORSOrigin)
 	)
 
-	requireFile("config/auth_model.conf", logger)
+	requireFile("config/auth_model.conf", mainLogger)
 	if https == "true" {
-		requireFile("config/cert.pem", logger)
-		requireFile("config/key.pem", logger)
+		requireFile("config/cert.pem", mainLogger)
+		requireFile("config/key.pem", mainLogger)
 	}
 
 	redisDB, err := strconv.Atoi(redisDatabase)
 	if err != nil || redisDB < 0 || redisDB > 15 {
-		(&LogEntry{
-			Level:   "FATAL",
-			Message: "error starting governance",
-			Error:   "REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15",
-		}).Log(logger)
+		mainLogger.Fatal(errors.New("REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15"), "error starting governance")
 		os.Exit(1)
 	}
 
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/", mongoUsername, mongoPassword, mongoHost, mongoPort)
 	mongoService, err := persist.NewMongoService(mongoURI)
 	if err != nil {
-		(&LogEntry{
-			Level:   "FATAL",
-			Message: "error starting governance",
-			Error:   fmt.Sprintf("failed to create MongoService: %s", err),
-		}).Log(logger)
+		mainLogger.Fatal(fmt.Errorf("failed to create MongoService: %s", err), "error starting governance")
 		os.Exit(1)
 	}
 
 	casbinService, err := auth.NewService(mongoURI)
 	if err != nil {
-		(&LogEntry{
-			Level:   "FATAL",
-			Message: "error starting governance",
-			Error:   fmt.Sprintf("failed to create CasbinService: %s", err),
-		}).Log(logger)
+		mainLogger.Fatal(fmt.Errorf("failed to create CasbinService: %s", err), "error starting governance")
 		os.Exit(1)
 	}
 
@@ -119,28 +107,19 @@ func main() {
 			Addr:    httpAddr,
 			Handler: httpHandler,
 		}
-		var actor string = "HTTP"
+		var mode string = "HTTP"
 		if https == "true" {
-			actor = "HTTPS"
+			mode = "HTTPS"
 		}
 		g.Add(func() error {
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   actor,
-				Message: fmt.Sprintf("starting server on %s", httpAddr),
-			}).Log(logger)
+			mainLogger.Infof("starting %s server on %s", mode, httpAddr)
 			if https == "true" {
 				return srv.ListenAndServeTLS("config/cert.pem", "config/key.pem")
 			}
 			// http
 			return srv.ListenAndServe()
 		}, func(err error) {
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   actor,
-				Message: "shutting down server",
-				Error:   err.Error(),
-			}).Log(logger)
+			mainLogger.ErrorNtf(err, "shutting down %s server", mode)
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			_ = srv.Shutdown(ctx)
@@ -151,29 +130,16 @@ func main() {
 		// grpc
 		grpcListener, err := net.Listen("tcp", grpcAddr)
 		if err != nil {
-			(&LogEntry{
-				Level:   "FATAL",
-				Message: "error starting governance",
-				Error:   fmt.Sprintf("failed to create gRPC listener: %s", err),
-			}).Log(logger)
+			mainLogger.Fatal(fmt.Errorf("failed to create gRPC listener: %s", err), "error starting governance")
 			os.Exit(1)
 		}
 		baseServer := grpc.NewServer()
 		pb.RegisterGovernanceServer(baseServer, grpcServer)
 		g.Add(func() error {
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   "GRPC",
-				Message: fmt.Sprintf("starting server on %s", grpcAddr),
-			}).Log(logger)
+			mainLogger.Infof("starting GRPC server on %s", grpcAddr)
 			return baseServer.Serve(grpcListener)
 		}, func(err error) {
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   "GRPC",
-				Message: "shutting down server",
-				Error:   err.Error(),
-			}).Log(logger)
+			mainLogger.ErrorNt(err, "shutting down GRPC server")
 			baseServer.Stop()
 		})
 	}
@@ -189,19 +155,10 @@ func main() {
 				case <-ticker.C:
 					_, err := redisService.Ping(ctx)
 					if err != nil {
-						(&LogEntry{
-							Level:   "ERROR",
-							Actor:   "RedisService",
-							Message: "status disconnected",
-							Error:   err.Error(),
-						}).Log(logger)
+						mainLogger.Error(err, "RedisService | status disconnected")
 						return err
 					} else {
-						(&LogEntry{
-							Level:   "INFO",
-							Actor:   "RedisService",
-							Message: "status healthy",
-						}).Log(logger)
+						mainLogger.Info("RedisService | status healthy")
 					}
 				case <-ctx.Done():
 					return nil
@@ -209,12 +166,7 @@ func main() {
 			}
 		}, func(err error) {
 			cancel()
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   "RedisService",
-				Message: "closing redis client",
-				Error:   err.Error(),
-			}).Log(logger)
+			mainLogger.ErrorNt(err, "RedisService | closing redis client")
 			_ = redisService.Close()
 		})
 	}
@@ -230,19 +182,10 @@ func main() {
 				case <-ticker.C:
 					err := mongoService.Ping(ctx)
 					if err != nil {
-						(&LogEntry{
-							Level:   "ERROR",
-							Actor:   "MongoService",
-							Message: "status disconnected",
-							Error:   err.Error(),
-						}).Log(logger)
+						mainLogger.Error(err, "MongoService | status disconnected")
 						return err
 					} else {
-						(&LogEntry{
-							Level:   "INFO",
-							Actor:   "MongoService",
-							Message: "status healthy",
-						}).Log(logger)
+						mainLogger.Info("MongoService | status healthy")
 					}
 				case <-ctx.Done():
 					return nil
@@ -250,12 +193,7 @@ func main() {
 			}
 		}, func(err error) {
 			cancel()
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   "MongoService",
-				Message: "disconnecting mongo client",
-				Error:   err.Error(),
-			}).Log(logger)
+			mainLogger.ErrorNt(err, "MongoService | disconnecting mongo  client")
 			ctx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancelTimeout()
 			_ = mongoService.Disconnect(ctx)
@@ -273,19 +211,10 @@ func main() {
 				case <-ticker.C:
 					err := casbinService.LoadPolicy()
 					if err != nil {
-						(&LogEntry{
-							Level:   "ERROR",
-							Actor:   "CasbinService",
-							Message: "could not reload policy",
-							Error:   err.Error(),
-						}).Log(logger)
+						mainLogger.Error(err, "CasbinService | could not reload policy")
 						return err
 					} else {
-						(&LogEntry{
-							Level:   "INFO",
-							Actor:   "CasbinService",
-							Message: "policy reloaded",
-						}).Log(logger)
+						mainLogger.Info("CasbinService | policy reloaded")
 					}
 				case <-ctx.Done():
 					return nil
@@ -293,12 +222,7 @@ func main() {
 			}
 		}, func(err error) {
 			cancel()
-			(&LogEntry{
-				Level:   "INFO",
-				Actor:   "CasbinService",
-				Message: "stopping policy reload",
-				Error:   err.Error(),
-			}).Log(logger)
+			mainLogger.ErrorNt(err, "CasbinService | stopping policy reload")
 		})
 	}
 
@@ -310,11 +234,8 @@ func main() {
 			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 			select {
 			case sig := <-c:
-				return (&LogEntry{
-					Level:   "INFO",
-					Actor:   "Ctrl+C",
-					Message: fmt.Sprintf("received signal: %s", sig),
-				}).Log(logger)
+				mainLogger.Infof("received signal: %s", sig)
+				return nil
 			case <-cancelInterrupt:
 				return nil
 			}
@@ -323,11 +244,7 @@ func main() {
 		})
 	}
 
-	(&LogEntry{
-		Level:   "FATAL",
-		Message: "stopping governance",
-		Error:   g.Run().Error(),
-	}).Log(logger)
+	mainLogger.Fatal(g.Run(), "stopping governance")
 	os.Exit(1)
 }
 
@@ -339,61 +256,19 @@ func envString(env, fallback string) string {
 	return e
 }
 
-func requireEnv(env string, logger log.Logger) string {
+func requireEnv(env string, logger logging.Logger) string {
 	e, ok := os.LookupEnv(env)
 	if e == "" || !ok {
-		(&LogEntry{
-			Level:   "FATAL",
-			Message: "error starting governance",
-			Error:   fmt.Sprintf("%s is not set", env),
-		}).Log(logger)
+		logger.Fatal(fmt.Errorf("%s is not set", env), "error starting governance")
 		os.Exit(1)
 	}
 	return e
 }
 
-func requireFile(path string, logger log.Logger) {
+func requireFile(path string, logger logging.Logger) {
 	_, err := os.Stat(path)
 	if err != nil {
-		(&LogEntry{
-			Level:   "FATAL",
-			Message: "error starting governance",
-			Error:   err.Error(),
-		}).Log(logger)
+		logger.Fatal(err, "error starting governance")
 		os.Exit(1)
 	}
-}
-
-type LogEntry struct {
-	Level   string `key:"LEVEL"`
-	Actor   string `key:"ACTOR"`
-	Message string `key:"MESSAGE"`
-	Error   string `key:"ERROR"`
-}
-
-func (e *LogEntry) Log(logger log.Logger) error {
-	v := reflect.ValueOf(*e)
-	t := v.Type()
-
-	var keyvals []any
-	for i, fieldType := range reflect.VisibleFields(t) {
-		fieldVal := v.Field(i)
-		tag := fieldType.Tag.Get("key")
-
-		switch fieldVal.Kind() {
-		case reflect.String:
-			if val := fieldVal.String(); val != "" {
-				keyvals = append(keyvals, tag, val)
-			}
-		case reflect.Int:
-			if val := fieldVal.Int(); val != 0 {
-				keyvals = append(keyvals, tag, val)
-			}
-		}
-	}
-
-	if len(keyvals) > 0 {
-		return logger.Log(keyvals...)
-	}
-	return nil
 }
