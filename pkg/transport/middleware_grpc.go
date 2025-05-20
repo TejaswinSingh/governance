@@ -9,6 +9,7 @@ import (
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/logging"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -19,7 +20,7 @@ func (f grpcHandlerFunc) ServeGRPC(ctx context.Context, req any) (context.Contex
 	return f(ctx, req)
 }
 
-func grpcLoggingMiddleware(rpc string, next grpctransport.Handler) grpctransport.Handler {
+func grpcLoggingMiddleware(logger logging.Logger, rpc string, next grpctransport.Handler) grpctransport.Handler {
 	return grpcHandlerFunc(func(ctx context.Context, req any) (context.Context, any, error) {
 		start := time.Now()
 
@@ -27,7 +28,7 @@ func grpcLoggingMiddleware(rpc string, next grpctransport.Handler) grpctransport
 
 		defer func() {
 			logE.Duration = time.Since(start).String()
-			logE.Log()
+			logE.Log(logger)
 		}()
 
 		// log userID if request has a token

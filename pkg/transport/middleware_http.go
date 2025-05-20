@@ -11,6 +11,7 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -42,7 +43,7 @@ func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
 	})
 }
 
-func LoggingMiddleware() func(http.Handler) http.Handler {
+func LoggingMiddleware(logger logging.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
@@ -60,7 +61,7 @@ func LoggingMiddleware() func(http.Handler) http.Handler {
 				Error:     rw.Err,
 				Duration:  time.Since(start).String(),
 			}
-			logE.Log()
+			logE.Log(logger)
 		})
 	}
 }

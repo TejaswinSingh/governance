@@ -6,43 +6,43 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	httptransport "github.com/go-kit/kit/transport/http"
-	"github.com/go-kit/log"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, secretKey string, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService, lw logging.LogWriter) http.Handler {
+	logger := logging.NewContextLogger(lw, "HttpHandler")
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/governance/healthz", LoggingMiddleware(logger)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
 	)), "GET")))))
 
-	m.Handle("/auth/login", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", LoggingMiddleware(logger)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
 	), "POST")))))
 
-	m.Handle("/auth/logout", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/logout", LoggingMiddleware(logger)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST")))))
 
-	m.Handle("/auth/refresh", LoggingMiddleware()(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
+	m.Handle("/auth/refresh", LoggingMiddleware(logger)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(secretKey, redisService, casbinService, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,
@@ -134,11 +134,4 @@ func encodeError(_ context.Context, err error, w http.ResponseWriter) {
 	rw.Err = fmt.Sprintf("%s [Internal Error: %s]", defErr.Error(), err.Error())
 	w.WriteHeader(defErr.HTTPCode)
 	json.NewEncoder(w).Encode(defErr)
-}
-
-var logger log.Logger
-
-func init() {
-	logger = log.NewLogfmtLogger(log.NewSyncWriter(os.Stderr))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 }

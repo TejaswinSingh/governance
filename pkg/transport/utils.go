@@ -2,9 +2,13 @@ package transport
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
+	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -34,7 +38,7 @@ type LogEntry struct {
 	Duration  string `key:"DURATION"`
 }
 
-func (e *LogEntry) Log() {
+func (e *LogEntry) Log(logger logging.Logger) {
 	if e.RequestID == "" {
 		e.RequestID = "Missing"
 	}
@@ -42,25 +46,32 @@ func (e *LogEntry) Log() {
 	v := reflect.ValueOf(*e)
 	t := v.Type()
 
-	var keyvals []any
+	var keyvals []string
 	for i, fieldType := range reflect.VisibleFields(t) {
 		fieldVal := v.Field(i)
 		tag := fieldType.Tag.Get("key")
 
 		switch fieldVal.Kind() {
 		case reflect.String:
-			if val := fieldVal.String(); val != "" {
-				keyvals = append(keyvals, tag, val)
+			val := fieldVal.String()
+			// skip 500 errors, they are logged below explicitly
+			if val != "" && !(tag == "ERROR" && e.Status >= 500) {
+				keyvals = append(keyvals, fmt.Sprintf("%s=%s", tag, val))
 			}
 		case reflect.Int:
 			if val := fieldVal.Int(); val != 0 {
-				keyvals = append(keyvals, tag, val)
+				keyvals = append(keyvals, fmt.Sprintf("%s=%d", tag, val))
 			}
 		}
 	}
 
 	if len(keyvals) > 0 {
-		_ = logger.Log(keyvals...)
+		logLine := strings.Join(keyvals, " ")
+		if e.Status >= 500 {
+			logger.Error(errors.New(e.Error), logLine)
+		} else {
+			logger.Info(logLine)
+		}
 	}
 }
 

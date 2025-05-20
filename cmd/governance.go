@@ -95,8 +95,8 @@ func main() {
 		)
 		service     = governance.NewService(secretKey, redisService, mongoService, casbinService)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, secretKey, corsConfig, redisService, casbinService)
-		grpcServer  = transport.NewGRPCServer(eps)
+		httpHandler = transport.NewHTTPHandler(eps, secretKey, corsConfig, redisService, casbinService, lw)
+		grpcServer  = transport.NewGRPCServer(eps, lw)
 	)
 
 	var g group.Group
