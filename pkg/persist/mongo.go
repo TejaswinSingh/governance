@@ -3,12 +3,24 @@ package persist
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
+
+type MongoConfiguration struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
+}
+
+func CreateMongoURI(config MongoConfiguration) string {
+	return fmt.Sprintf("mongodb://%s:%s@%s:%s/", config.Username, config.Password, config.Host, config.Port)
+}
 
 type MongoService struct {
 	client *mongo.Client

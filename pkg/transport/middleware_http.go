@@ -10,6 +10,7 @@ import (
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
+	"github.com/Resolyte-official/service-governance/pkg/config"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
@@ -110,7 +111,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
+func AuthMiddleware(envConfig config.Configuration, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			claims jwt.MapClaims
@@ -121,7 +122,7 @@ func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbin
 		switch r.URL.Path {
 		case "/auth/refresh":
 			// refresh token
-			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "refresh")
+			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "refresh")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -129,7 +130,7 @@ func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbin
 
 		case "/auth/logout":
 			// access token
-			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -137,7 +138,7 @@ func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbin
 			// refresh token
 			var claims2 jwt.MapClaims
 			var err2 error
-			r, claims2, err2 = extractAndVerifyToken(r, redisService, secretKey, "refresh")
+			r, claims2, err2 = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "refresh")
 			if err2 != nil {
 				encodeError(r.Context(), err2, w)
 				return
@@ -150,7 +151,7 @@ func AuthMiddleware(secretKey string, redisService *persist.RedisService, casbin
 
 		default:
 			// access token
-			r, claims, err = extractAndVerifyToken(r, redisService, secretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return

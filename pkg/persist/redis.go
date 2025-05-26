@@ -2,22 +2,30 @@ package persist
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/redis/go-redis/v9"
 )
 
+type RedisConfiguration struct {
+	Host     string
+	Port     string
+	Password string
+	Database int
+}
+
 type RedisService struct {
 	client *redis.Client
 }
 
-func NewRedisService(addr, password string, db int) *RedisService {
+func NewRedisService(config RedisConfiguration) *RedisService {
 	return &RedisService{
 		client: redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Password: password,
-			DB:       db,
+			Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
+			Password: config.Password,
+			DB:       config.Database,
 		})}
 }
 

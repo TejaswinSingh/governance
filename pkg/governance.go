@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
+	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/golang-jwt/jwt/v5"
@@ -13,15 +14,15 @@ import (
 )
 
 type governanceService struct {
-	secretKey     string
+	envConfig     config.Configuration
 	redisService  *persist.RedisService
 	mongoService  *persist.MongoService
 	casbinService *auth.CasbinService
 }
 
-func NewService(secretKey string, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
+func NewService(envConfig config.Configuration, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
 	return &governanceService{
-		secretKey:     secretKey,
+		envConfig:     envConfig,
 		redisService:  redisService,
 		mongoService:  mongoService,
 		casbinService: casbinService,
@@ -51,11 +52,11 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 
 	// create tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.secretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.secretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
@@ -102,11 +103,11 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	id, _ := claimsRefresh["sub"].(string)
 	role, _ := claimsRefresh["aud"].(string)
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.secretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "access", now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.secretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "refresh", now)
 	if err != nil {
 		return fail(err)
 	}
@@ -126,7 +127,7 @@ func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt
 		return nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.envConfig.SecretKey, "access")
 	if err != nil {
 		return fail(err)
 	}
@@ -140,7 +141,7 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 		return false, nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.secretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.envConfig.SecretKey, "access")
 	if err != nil {
 		return fail(err)
 	}
