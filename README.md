@@ -8,8 +8,7 @@ Create a `.env` file in the root directory of the project and add the following 
 ```ini
 # Environment type (e.g., development, production)
 ENV=development
-
-HTTPS=false
+USE_HTTPS=false
 
 GOVERNANCE_HTTP_PORT=12001
 GOVERNANCE_GRPC_PORT=9090
