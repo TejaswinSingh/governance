@@ -3,10 +3,8 @@ package transport
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
@@ -27,15 +25,15 @@ func (rw *ResponseWriter) WriteHeader(status int) {
 }
 
 type LogEntry struct {
-	RequestID string `key:"REQUEST_ID"`
-	UserID    string `key:"USER_ID"`
-	Transport string `key:"TRANSPORT"`
-	Method    string `key:"METHOD"`
-	Path      string `key:"PATH"`
-	RPC       string `key:"RPC"`
-	Status    int    `key:"STATUS"`
-	Error     string `key:"ERROR"`
-	Duration  string `key:"DURATION"`
+	RequestID string `key:"request_id"`
+	UserID    string `key:"user_id"`
+	Transport string `key:"transport"`
+	Method    string `key:"method"`
+	Path      string `key:"path"`
+	RPC       string `key:"rpc"`
+	Status    int    `key:"status"`
+	Error     string `key:"error"`
+	Duration  string `key:"duration"`
 }
 
 func (e *LogEntry) Log(logger logging.Logger) {
@@ -46,7 +44,7 @@ func (e *LogEntry) Log(logger logging.Logger) {
 	v := reflect.ValueOf(*e)
 	t := v.Type()
 
-	var keyvals []string
+	keyVals := make(map[string]any)
 	for i, fieldType := range reflect.VisibleFields(t) {
 		fieldVal := v.Field(i)
 		tag := fieldType.Tag.Get("key")
@@ -55,23 +53,19 @@ func (e *LogEntry) Log(logger logging.Logger) {
 		case reflect.String:
 			val := fieldVal.String()
 			// skip 500 errors, they are logged below explicitly
-			if val != "" && !(tag == "ERROR" && e.Status >= 500) {
-				keyvals = append(keyvals, fmt.Sprintf("%s=%s", tag, val))
+			if val != "" && !(tag == "error" && e.Status >= 500) {
+				keyVals[tag] = val
 			}
 		case reflect.Int:
 			if val := fieldVal.Int(); val != 0 {
-				keyvals = append(keyvals, fmt.Sprintf("%s=%d", tag, val))
+				keyVals[tag] = val
 			}
 		}
 	}
-
-	if len(keyvals) > 0 {
-		logLine := strings.Join(keyvals, " ")
-		if e.Status >= 500 {
-			logger.Error(errors.New(e.Error), logLine)
-		} else {
-			logger.Info(logLine)
-		}
+	if e.Status >= 500 {
+		logger.ErrorMap(errors.New(e.Error), keyVals)
+	} else {
+		logger.InfoMap(keyVals)
 	}
 }
 

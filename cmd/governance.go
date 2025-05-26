@@ -36,7 +36,14 @@ const (
 )
 
 func main() {
-	lw := logging.NewTextLogWriter(os.Stdout, logging.INFO)
+	env := envString("ENV", "DEV")
+	var lw logging.LogWriter
+	if env == "PROD" {
+		lw = logging.NewJsonLogWriter(os.Stdout, logging.INFO)
+	} else {
+		lw = logging.NewTextLogWriter(os.Stdout, logging.INFO)
+	}
+
 	mainLogger := logging.NewContextLogger(lw, "Main")
 
 	var (
@@ -65,20 +72,17 @@ func main() {
 	redisDB, err := strconv.Atoi(redisDatabase)
 	if err != nil || redisDB < 0 || redisDB > 15 {
 		mainLogger.Fatal(errors.New("REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15"), "error starting governance")
-		os.Exit(1)
 	}
 
 	mongoURI := fmt.Sprintf("mongodb://%s:%s@%s:%s/", mongoUsername, mongoPassword, mongoHost, mongoPort)
 	mongoService, err := persist.NewMongoService(mongoURI)
 	if err != nil {
 		mainLogger.Fatal(fmt.Errorf("failed to create MongoService: %s", err), "error starting governance")
-		os.Exit(1)
 	}
 
 	casbinService, err := auth.NewService(mongoURI)
 	if err != nil {
 		mainLogger.Fatal(fmt.Errorf("failed to create CasbinService: %s", err), "error starting governance")
-		os.Exit(1)
 	}
 
 	var (
@@ -131,7 +135,6 @@ func main() {
 		grpcListener, err := net.Listen("tcp", grpcAddr)
 		if err != nil {
 			mainLogger.Fatal(fmt.Errorf("failed to create gRPC listener: %s", err), "error starting governance")
-			os.Exit(1)
 		}
 		baseServer := grpc.NewServer()
 		pb.RegisterGovernanceServer(baseServer, grpcServer)
@@ -245,7 +248,6 @@ func main() {
 	}
 
 	mainLogger.Fatal(g.Run(), "stopping governance")
-	os.Exit(1)
 }
 
 func envString(env, fallback string) string {
@@ -260,7 +262,6 @@ func requireEnv(env string, logger logging.Logger) string {
 	e, ok := os.LookupEnv(env)
 	if e == "" || !ok {
 		logger.Fatal(fmt.Errorf("%s is not set", env), "error starting governance")
-		os.Exit(1)
 	}
 	return e
 }
@@ -269,6 +270,5 @@ func requireFile(path string, logger logging.Logger) {
 	_, err := os.Stat(path)
 	if err != nil {
 		logger.Fatal(err, "error starting governance")
-		os.Exit(1)
 	}
 }
