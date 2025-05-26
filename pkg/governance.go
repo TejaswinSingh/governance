@@ -8,24 +8,19 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
-	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type governanceService struct {
-	envConfig     *config.Configuration
-	redisService  *persist.RedisService
-	mongoService  *persist.MongoService
-	casbinService *auth.CasbinService
+	envConfig *config.Configuration
+	svcStore  *ServiceStore
 }
 
-func NewService(envConfig *config.Configuration, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
+func NewService(envConfig *config.Configuration, svcStore *ServiceStore) Service {
 	return &governanceService{
-		envConfig:     envConfig,
-		redisService:  redisService,
-		mongoService:  mongoService,
-		casbinService: casbinService,
+		envConfig: envConfig,
+		svcStore:  svcStore,
 	}
 }
 
@@ -72,13 +67,13 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 
 func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error) {
 	// add access-token to blacklist
-	err := auth.BlacklistToken(ctx, s.redisService, tokenAccess, claimsAccess)
+	err := auth.BlacklistToken(ctx, s.svcStore.Redis, tokenAccess, claimsAccess)
 	if err != nil {
 		return 0, err
 	}
 
 	// add refresh-token to blacklist
-	err = auth.BlacklistToken(ctx, s.redisService, tokenRefresh, claimsRefresh)
+	err = auth.BlacklistToken(ctx, s.svcStore.Redis, tokenRefresh, claimsRefresh)
 	if err != nil {
 		return 0, err
 	}
@@ -92,7 +87,7 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	}
 
 	// add the current refresh-token to blacklist
-	err := auth.BlacklistToken(ctx, s.redisService, curTokenRefresh, claimsRefresh)
+	err := auth.BlacklistToken(ctx, s.svcStore.Redis, curTokenRefresh, claimsRefresh)
 	if err != nil {
 		return fail(err)
 	}
@@ -127,7 +122,7 @@ func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt
 		return nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.envConfig.SecretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, "access")
 	if err != nil {
 		return fail(err)
 	}
@@ -141,7 +136,7 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 		return false, nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.redisService, token, s.envConfig.SecretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, "access")
 	if err != nil {
 		return fail(err)
 	}
@@ -150,7 +145,7 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 	// and not the sub in jwt claims
 	sub, _ := claims["aud"].(string)
 
-	eft, err := s.casbinService.CheckPermission(sub, obj, act)
+	eft, err := s.svcStore.Casbin.CheckPermission(sub, obj, act)
 	if err != nil {
 		return fail(err)
 	}

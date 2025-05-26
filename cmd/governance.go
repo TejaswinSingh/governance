@@ -63,10 +63,15 @@ func main() {
 			AllowCredentials: false,                                                                                                       // Allow credentials to be included
 		}
 		redisService = persist.NewRedisService(&envConfig.Redis)
-		service      = governance.NewService(&envConfig, redisService, mongoService, casbinService)
-		eps          = endpoints.NewEndpointSet(service)
-		httpHandler  = transport.NewHTTPHandler(eps, &envConfig, corsConfig, redisService, casbinService, lw)
-		grpcServer   = transport.NewGRPCServer(eps, lw)
+		store        = &governance.ServiceStore{
+			Redis:  redisService,
+			Mongo:  mongoService,
+			Casbin: casbinService,
+		}
+		service     = governance.NewService(&envConfig, store)
+		eps         = endpoints.NewEndpointSet(service)
+		httpHandler = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, lw)
+		grpcServer  = transport.NewGRPCServer(eps, lw)
 	)
 
 	var g group.Group

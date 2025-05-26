@@ -44,7 +44,7 @@ func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
 	})
 }
 
-func LoggingMiddleware(logger logging.Logger) func(http.Handler) http.Handler {
+func LoggingMiddleware(logger logging.Logger, mode config.HttpMode) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
@@ -53,7 +53,7 @@ func LoggingMiddleware(logger logging.Logger) func(http.Handler) http.Handler {
 			next.ServeHTTP(rw, r)
 
 			logE := &LogEntry{
-				Transport: "HTTP",
+				Transport: string(mode),
 				Method:    r.Method,
 				Path:      r.URL.Path,
 				RequestID: rw.RequestID,
@@ -111,7 +111,7 @@ func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
 	})
 }
 
-func AuthMiddleware(envConfig *config.Configuration, redisService *persist.RedisService, casbinService *auth.CasbinService, next http.Handler) http.Handler {
+func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.ServiceStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			claims jwt.MapClaims
@@ -122,7 +122,7 @@ func AuthMiddleware(envConfig *config.Configuration, redisService *persist.Redis
 		switch r.URL.Path {
 		case "/auth/refresh":
 			// refresh token
-			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "refresh")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "refresh")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -130,7 +130,7 @@ func AuthMiddleware(envConfig *config.Configuration, redisService *persist.Redis
 
 		case "/auth/logout":
 			// access token
-			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -138,7 +138,7 @@ func AuthMiddleware(envConfig *config.Configuration, redisService *persist.Redis
 			// refresh token
 			var claims2 jwt.MapClaims
 			var err2 error
-			r, claims2, err2 = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "refresh")
+			r, claims2, err2 = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "refresh")
 			if err2 != nil {
 				encodeError(r.Context(), err2, w)
 				return
@@ -151,7 +151,7 @@ func AuthMiddleware(envConfig *config.Configuration, redisService *persist.Redis
 
 		default:
 			// access token
-			r, claims, err = extractAndVerifyToken(r, redisService, envConfig.SecretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "access")
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -160,7 +160,7 @@ func AuthMiddleware(envConfig *config.Configuration, redisService *persist.Redis
 
 		// authorization
 		role, _ := claims["aud"].(string)
-		ok, err := casbinService.CheckPermission(role, r.URL.Path, r.Method)
+		ok, err := svcStore.Casbin.CheckPermission(role, r.URL.Path, r.Method)
 		if err != nil { // casbin errors
 			encodeError(r.Context(), err, w)
 			return

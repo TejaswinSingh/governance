@@ -39,7 +39,7 @@ func bsonDToMap(d bson.D) map[string]any {
 }
 
 func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, filter any) (bson.M, error) {
-	res, err := s.mongoService.FindOne(ctx, coll, filter)
+	res, err := s.svcStore.Mongo.FindOne(ctx, coll, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, myerrors.ErrMetaData.SetInternalErr(err)
@@ -55,10 +55,10 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 
 func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*bson.M, error) {
 	db := "metadata"
-	collUsers := s.mongoService.GetCollection(db, "users")
-	collStudents := s.mongoService.GetCollection(db, "students")
-	collVehicles := s.mongoService.GetCollection(db, "vehicles")
-	collRoutes := s.mongoService.GetCollection(db, "routes")
+	collUsers := s.svcStore.Mongo.GetCollection(db, "users")
+	collStudents := s.svcStore.Mongo.GetCollection(db, "students")
+	collVehicles := s.svcStore.Mongo.GetCollection(db, "vehicles")
+	collRoutes := s.svcStore.Mongo.GetCollection(db, "routes")
 
 	userUUID, err := uuidStrToBinary(userID)
 	if err != nil {
