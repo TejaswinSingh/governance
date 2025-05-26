@@ -20,7 +20,7 @@ type RedisService struct {
 	client *redis.Client
 }
 
-func NewRedisService(config RedisConfiguration) *RedisService {
+func NewRedisService(config *RedisConfiguration) *RedisService {
 	return &RedisService{
 		client: redis.NewClient(&redis.Options{
 			Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),

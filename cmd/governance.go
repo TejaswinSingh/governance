@@ -43,7 +43,7 @@ func main() {
 		requireFile("config/key.pem")
 	}
 
-	mongoURI := persist.CreateMongoURI(envConfig.Mongo)
+	mongoURI := persist.CreateMongoURI(&envConfig.Mongo)
 	mongoService, err := persist.NewMongoService(mongoURI)
 	if err != nil {
 		mainLogger.Fatal(fmt.Errorf("failed to create MongoService: %s", err), "error starting governance")
@@ -62,10 +62,10 @@ func main() {
 			ExposeHeaders:    []string{"Content-Type", "Authorization", "X-Refresh-Token"},                                                // Allow any headers to be exposed
 			AllowCredentials: false,                                                                                                       // Allow credentials to be included
 		}
-		redisService = persist.NewRedisService(envConfig.Redis)
-		service      = governance.NewService(envConfig, redisService, mongoService, casbinService)
+		redisService = persist.NewRedisService(&envConfig.Redis)
+		service      = governance.NewService(&envConfig, redisService, mongoService, casbinService)
 		eps          = endpoints.NewEndpointSet(service)
-		httpHandler  = transport.NewHTTPHandler(eps, envConfig, corsConfig, redisService, casbinService, lw)
+		httpHandler  = transport.NewHTTPHandler(eps, &envConfig, corsConfig, redisService, casbinService, lw)
 		grpcServer   = transport.NewGRPCServer(eps, lw)
 	)
 

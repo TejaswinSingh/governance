@@ -18,7 +18,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func NewHTTPHandler(ep endpoints.Set, envConfig config.Configuration, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService, lw logging.LogWriter) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, redisService *persist.RedisService, casbinService *auth.CasbinService, lw logging.LogWriter) http.Handler {
 	logger := logging.NewContextLogger(lw, "HttpHandler")
 	m := http.NewServeMux()
 

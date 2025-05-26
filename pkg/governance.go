@@ -14,13 +14,13 @@ import (
 )
 
 type governanceService struct {
-	envConfig     config.Configuration
+	envConfig     *config.Configuration
 	redisService  *persist.RedisService
 	mongoService  *persist.MongoService
 	casbinService *auth.CasbinService
 }
 
-func NewService(envConfig config.Configuration, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
+func NewService(envConfig *config.Configuration, redisService *persist.RedisService, mongoService *persist.MongoService, casbinService *auth.CasbinService) Service {
 	return &governanceService{
 		envConfig:     envConfig,
 		redisService:  redisService,

@@ -18,7 +18,7 @@ type MongoConfiguration struct {
 	Password string
 }
 
-func CreateMongoURI(config MongoConfiguration) string {
+func CreateMongoURI(config *MongoConfiguration) string {
 	return fmt.Sprintf("mongodb://%s:%s@%s:%s/", config.Username, config.Password, config.Host, config.Port)
 }
 
