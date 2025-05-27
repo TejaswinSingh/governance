@@ -32,13 +32,13 @@ func (tl *TextLogWriter) print(level Level, err error, message string, context s
 
 	var line string
 	if err != nil {
-		line = fmt.Sprintf("GOVERNANCE | %s %v[%s]: error=%s message=%s\n", t, level, context, err.Error(), message)
+		line = fmt.Sprintf("%sGOVERNANCE | %s %v[%s]: error=%s message=%s%s\n", getLevelColor(level), t, level, context, err.Error(), message, RESET)
 	} else {
-		line = fmt.Sprintf("GOVERNANCE | %s %v[%s]: %s\n", t, level, context, message)
+		line = fmt.Sprintf("%sGOVERNANCE | %s %v[%s]: %s%s\n", getLevelColor(level), t, level, context, message, RESET)
 	}
 
 	if level >= ERROR {
-		line += fmt.Sprintf("trace: %s", string(debug.Stack()))
+		line += fmt.Sprintf("%strace: %s", getLevelColor(ERROR), colorizeDebugStack(string(debug.Stack())))
 	}
 
 	tl.mu.Lock()
@@ -67,13 +67,13 @@ func (tl *TextLogWriter) printMap(level Level, err error, keyVals map[string]any
 
 	var line string
 	if err != nil {
-		line = fmt.Sprintf("GOVERNANCE | %s %v[%s]: error=%s %s\n", t, level, context, err.Error(), fields)
+		line = fmt.Sprintf("%sGOVERNANCE | %s %v[%s]: error=%s %s%s\n", getLevelColor(level), t, level, context, err.Error(), fields, RESET)
 	} else {
-		line = fmt.Sprintf("GOVERNANCE | %s %v[%s]: %s\n", t, level, context, fields)
+		line = fmt.Sprintf("%sGOVERNANCE | %s %v[%s]: %s%s\n", getLevelColor(level), t, level, context, fields, RESET)
 	}
 
 	if level >= ERROR {
-		line += fmt.Sprintf("trace: %s", string(debug.Stack()))
+		line += fmt.Sprintf("%strace: %s", getLevelColor(ERROR), colorizeDebugStack(string(debug.Stack())))
 	}
 
 	tl.mu.Lock()
