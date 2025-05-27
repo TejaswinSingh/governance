@@ -82,16 +82,16 @@ spec:
           ports:
             - containerPort: 27017
           env:
-            - name: MONGO_INITDB_ROOT_USERNAME
+            - name: MONGODB_INITDB_ROOT_USERNAME
               valueFrom:
                 secretKeyRef:
                   name: app-secret
-                  key: MONGO_INITDB_ROOT_USERNAME
-            - name: MONGO_INITDB_ROOT_PASSWORD
+                  key: MONGODB_INITDB_ROOT_USERNAME
+            - name: MONGODB_INITDB_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: app-secret
-                  key: MONGO_INITDB_ROOT_PASSWORD
+                  key: MONGODB_INITDB_ROOT_PASSWORD
           volumeMounts:
             - name: mongo-data
               mountPath: /data/db
@@ -159,6 +159,6 @@ type: Opaque
 data:
   SECRET_KEY: bXktc2VjcmV0LWtleQ==
   REDIS_PASSWORD: bXlyZWRpc3Bhc3N3b3Jk
-  MONGO_INITDB_ROOT_USERNAME: YWRtaW4=
-  MONGO_INITDB_ROOT_PASSWORD: bXltb25nb3Bhc3N3b3Jk
+  MONGODB_INITDB_ROOT_USERNAME: YWRtaW4=
+  MONGODB_INITDB_ROOT_PASSWORD: bXltb25nb3Bhc3N3b3Jk
 ---
