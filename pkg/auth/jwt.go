@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/errors"
@@ -9,20 +10,25 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type AuthToken string
+
 const (
-	accessTokenExpiry  = time.Hour * 1       // 1 hour
-	refreshTokenExpiry = time.Hour * 24 * 15 // 15 days
+	Domain             string    = "abcdery.com"
+	AccessToken        AuthToken = "access_token"
+	RefreshToken       AuthToken = "refresh_token"
+	AccessTokenExpiry            = time.Minute * 15    // 15 minutes
+	RefreshTokenExpiry           = time.Hour * 24 * 15 // 15 days
 )
 
-func CreateToken(id, role, secretKey, tokenType string, now time.Time) (string, error) {
+func CreateToken(id, role, secretKey string, token AuthToken, now time.Time) (string, error) {
 	var exp time.Duration
-	if tokenType == "access" {
-		exp = accessTokenExpiry
+	if token == AccessToken {
+		exp = AccessTokenExpiry
 	} else { // refresh
-		exp = refreshTokenExpiry
+		exp = RefreshTokenExpiry
 	}
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"type": tokenType,             // Type of token
+		"type": string(token),         // Type of token
 		"sub":  id,                    // Subject (user identifier)
 		"iss":  "resolyte.governance", // Issuer
 		"aud":  role,                  // Audience (user role)
@@ -38,13 +44,6 @@ func CreateToken(id, role, secretKey, tokenType string, now time.Time) (string, 
 	return tokenString, nil
 }
 
-func ExtractToken(authHeader string) string {
-	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-		return authHeader[7:]
-	}
-	return authHeader
-}
-
 func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
 	if err != nil {
@@ -56,7 +55,7 @@ func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 	return nil, errors.ErrInvalidClaims
 }
 
-func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey, tokenType string) (jwt.MapClaims, error) {
+func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey string, tk AuthToken) (jwt.MapClaims, error) {
 	if tokenString == "" {
 		return nil, errors.ErrInvalidToken
 	}
@@ -89,7 +88,7 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 
 	// validate token type
 	tokenTypeClaim, ok := claims["type"].(string)
-	if !ok || tokenTypeClaim != tokenType {
+	if !ok || tokenTypeClaim != string(tk) {
 		return nil, errors.ErrInvalidClaims
 	}
 
@@ -142,4 +141,54 @@ func BlacklistToken(ctx context.Context, redisService *persist.RedisService, tok
 		return err
 	}
 	return nil
+}
+
+func SetAuthCookie(w http.ResponseWriter, token AuthToken, value string) {
+	var (
+		maxAge  int
+		expires time.Time
+		path    string
+	)
+	switch token {
+	case AccessToken:
+		maxAge = int(AccessTokenExpiry.Seconds())
+		expires = time.Now().Add(AccessTokenExpiry)
+		path = "/"
+	case RefreshToken:
+		maxAge = int(RefreshTokenExpiry.Seconds())
+		expires = time.Now().Add(RefreshTokenExpiry)
+		path = "/auth/"
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     string(token),
+		Domain:   Domain,
+		Path:     path,
+		Value:    value,
+		MaxAge:   maxAge,
+		Expires:  expires,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func ClearAuthCookie(w http.ResponseWriter, token AuthToken) {
+	var path string
+	switch token {
+	case AccessToken:
+		path = "/"
+	case RefreshToken:
+		path = "/auth/"
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     string(token),
+		Domain:   Domain,
+		Path:     path,
+		Value:    "",
+		MaxAge:   -1, // Marks cookie for immediate removal
+		Expires:  time.Unix(0, 0),
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 }

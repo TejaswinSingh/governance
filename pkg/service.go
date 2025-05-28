@@ -9,15 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type ContextKey string
-
-const (
-	AccessClaimsKey  ContextKey = "access-claims"
-	RefreshClaimsKey ContextKey = "refresh-claims"
-	AccessTokenKey   ContextKey = "access-token"
-	RefreshTokenKey  ContextKey = "refresh-token"
-)
-
 type Service interface {
 	ServiceStatus(ctx context.Context) (int, error)
 	Login(ctx context.Context, username, password string) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)

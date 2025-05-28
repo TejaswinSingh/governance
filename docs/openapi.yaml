@@ -13,7 +13,7 @@ paths:
     get:
       summary: Check service health
       security:
-        - bearerAuth: []
+        - authCookie: []
       parameters:
         - $ref: '#/components/parameters/RequestIDHeader'
       responses:
@@ -35,6 +35,7 @@ paths:
   /auth/login:
     post:
       summary: User login
+      security: []
       parameters:
         - $ref: '#/components/parameters/RequestIDHeader'
       requestBody:
@@ -55,15 +56,17 @@ paths:
         "200":
           description: Successful login
           headers:
-            Authorization:
-              description: Bearer access token
+            Set-Cookie:
+              description: |
+                Sets `access_token` and `refresh_token` cookies.
+                HttpOnly, Secure, SameSite=Strict
               schema:
-                type: string
-            X-Refresh-Token:
-              description: Refresh token for future authentication
-              schema:
-                type: string
-                example: abcdef123456
+                type: array
+                items:
+                  type: string
+                example:
+                  - access_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=...; Path=/auth/; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -85,13 +88,25 @@ paths:
     post:
       summary: User logout
       security:
-        - bearerAuth: []
-        - refreshHeaderAuth: []
+        - authCookie: []
+        - refreshCookie: []
       parameters:
         - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Successfully logged out
+          headers:
+            Set-Cookie:
+              description: |
+                Clears `access_token` and `refresh_token` cookies by setting them
+                with an expired date and Max-Age=0.
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=; Path=/auth/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -111,22 +126,24 @@ paths:
     post:
       summary: Refresh access token
       security:
-        - refreshHeaderAuth: []
+        - refreshCookie: []
       parameters:
         - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Token refreshed
           headers:
-            Authorization:
-              description: Bearer new access token
+            Set-Cookie:
+              description: |
+                Sets `access_token` and `refresh_token` cookies.
+                HttpOnly, Secure, SameSite=Strict
               schema:
-                type: string
-            X-Refresh-Token:
-              description: New refresh token
-              schema:
-                type: string
-                example: newtoken123456
+                type: array
+                items:
+                  type: string
+                example:
+                  - access_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=...; Path=/auth/; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -148,14 +165,14 @@ paths:
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-    refreshHeaderAuth:
+    authCookie:
       type: apiKey
-      in: header
-      name: X-Refresh-Token
+      in: cookie
+      name: access_token
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
 
   parameters:
     RequestIDHeader:

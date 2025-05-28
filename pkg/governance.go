@@ -47,11 +47,11 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 
 	// create tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.RefreshToken, now)
 	if err != nil {
 		return fail(err)
 	}
@@ -98,11 +98,11 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	id, _ := claimsRefresh["sub"].(string)
 	role, _ := claimsRefresh["aud"].(string)
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "access", now)
+	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, "refresh", now)
+	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.RefreshToken, now)
 	if err != nil {
 		return fail(err)
 	}
@@ -122,7 +122,7 @@ func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt
 		return nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, auth.AccessToken)
 	if err != nil {
 		return fail(err)
 	}
@@ -136,7 +136,7 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 		return false, nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, "access")
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, auth.AccessToken)
 	if err != nil {
 		return fail(err)
 	}

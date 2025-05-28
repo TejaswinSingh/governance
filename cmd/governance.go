@@ -56,11 +56,11 @@ func main() {
 
 	var (
 		corsConfig = &transport.CorsOptions{
-			Origin:           envConfig.CorsOrigin,                                                                                        // Allow only specified origin
-			Methods:          []string{"GET", "POST", "OPTIONS", "PUT", "UPDATE", "DELETE"},                                               // Allow common HTTP methods
-			Headers:          []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "X-Refresh-Token"}, // Allow common HTTP headers
-			ExposeHeaders:    []string{"Content-Type", "Authorization", "X-Refresh-Token"},                                                // Allow any headers to be exposed
-			AllowCredentials: false,                                                                                                       // Allow credentials to be included
+			Origin:           envConfig.CorsOrigin,                                                                    // Allow only specified origin
+			Methods:          []string{"GET", "POST", "OPTIONS", "PUT", "UPDATE", "DELETE"},                           // Allow common HTTP methods
+			Headers:          []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-Request-ID"}, // Allow common HTTP headers
+			ExposeHeaders:    []string{"Content-Type", "X-Request-ID"},                                                // Allow any headers to be exposed
+			AllowCredentials: true,                                                                                    // Allow credentials to be included
 		}
 		redisService = persist.NewRedisService(&envConfig.Redis)
 		store        = &governance.ServiceStore{

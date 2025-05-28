@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
+	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
@@ -16,37 +17,46 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type ContextKey string
+
+const (
+	AccessClaimsKey  ContextKey = "access-claims"
+	RefreshClaimsKey ContextKey = "refresh-claims"
+	AccessTokenKey   ContextKey = "access-token"
+	RefreshTokenKey  ContextKey = "refresh-token"
+)
+
 func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, svcStore *governance.ServiceStore, lw logging.LogWriter) http.Handler {
 	logger := logging.NewContextLogger(lw, "HttpHandler")
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", LoggingMiddleware(logger, envConfig.HttpMode)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/governance/healthz", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
-	)), "GET")))))
+	)), "GET"))))
 
-	m.Handle("/auth/login", LoggingMiddleware(logger, envConfig.HttpMode)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	), "POST")))))
+	), "POST"))))
 
-	m.Handle("/auth/logout", LoggingMiddleware(logger, envConfig.HttpMode)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/auth/logout", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST")))))
+	)), "POST"))))
 
-	m.Handle("/auth/refresh", LoggingMiddleware(logger, envConfig.HttpMode)(TracingMiddleware(CORSMiddleware(corsConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/auth/refresh", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		encodeResponse,
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST")))))
+	)), "POST"))))
 
 	return m
 }
@@ -69,18 +79,23 @@ func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (any, error) {
 func decodeHTTPLogoutRequest(ctx context.Context, r *http.Request) (any, error) {
 	return endpoints.LogoutRequest{
 		// get values extracted by the auth middleware
-		TokenAccess:   ctx.Value(governance.AccessTokenKey).(string),
-		TokenRefresh:  ctx.Value(governance.RefreshTokenKey).(string),
-		ClaimsAccess:  ctx.Value(governance.AccessClaimsKey).(jwt.MapClaims),
-		ClaimsRefresh: ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims),
+		TokenAccess:   ctx.Value(AccessTokenKey).(string),
+		TokenRefresh:  ctx.Value(RefreshTokenKey).(string),
+		ClaimsAccess:  ctx.Value(AccessClaimsKey).(jwt.MapClaims),
+		ClaimsRefresh: ctx.Value(RefreshClaimsKey).(jwt.MapClaims),
 	}, nil
 }
 
 func decodeHTTPRefreshRequest(ctx context.Context, r *http.Request) (any, error) {
 	return endpoints.RefreshRequest{
-		TokenRefresh:  ctx.Value(governance.RefreshTokenKey).(string),
-		ClaimsRefresh: ctx.Value(governance.RefreshClaimsKey).(jwt.MapClaims),
+		TokenRefresh:  ctx.Value(RefreshTokenKey).(string),
+		ClaimsRefresh: ctx.Value(RefreshClaimsKey).(jwt.MapClaims),
 	}, nil
+}
+
+// TODO
+func encrypt(text string) string {
+	return text
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) error {
@@ -90,22 +105,25 @@ func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) er
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	// set access token and refresh token in the header
-	// for login and refresh response
+	// set auth cookies for login and refresh response
 	if resp, ok := response.(interface {
 		GetAccessToken() string
 		GetRefreshToken() string
 	}); ok {
-		w.Header().Set("Authorization", "Bearer "+resp.GetAccessToken())
-		w.Header().Set("X-Refresh-Token", resp.GetRefreshToken())
+		auth.SetAuthCookie(w, auth.AccessToken, encrypt(resp.GetAccessToken()))
+		auth.SetAuthCookie(w, auth.RefreshToken, encrypt(resp.GetRefreshToken()))
+	}
+
+	// clear auth cookies for LogoutResponse
+	if _, ok := response.(endpoints.LogoutResponse); ok {
+		auth.ClearAuthCookie(w, auth.AccessToken)
+		auth.ClearAuthCookie(w, auth.RefreshToken)
 	}
 
 	// write status in header
-	var status int
+	status := http.StatusOK
 	if resp, ok := response.(interface{ GetStatus() int }); ok {
 		status = resp.GetStatus()
-	} else {
-		status = http.StatusOK
 	}
 	w.WriteHeader(status)
 

@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -27,27 +26,34 @@ type CorsOptions struct {
 	AllowCredentials bool     // AllowCredentials indicates whether or not the response to the request can be exposed when the credentials flag is true
 }
 
-func CORSMiddleware(corsConfig *CorsOptions, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", corsConfig.Origin)
-		w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
-		w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
-		w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
-		w.Header().Set("Access-Control-Allow-Credentials", fmt.Sprint(corsConfig.AllowCredentials))
-
-		// preflight request
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+func addCorsHeaders(corsConfig *CorsOptions, w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", corsConfig.Origin)
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
+	w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
+	w.Header().Set("Access-Control-Allow-Credentials", fmt.Sprint(corsConfig.AllowCredentials))
 }
 
-func LoggingMiddleware(logger logging.Logger, mode config.HttpMode) func(http.Handler) http.Handler {
+func LoggingMiddleware(logger logging.Logger, corsConfig *CorsOptions, mode config.HttpMode) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
+
+			addCorsHeaders(corsConfig, w)
+
+			// case: preflight request
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusNoContent)
+				logE := &LogEntry{
+					Transport: string(mode),
+					Method:    r.Method,
+					Path:      r.URL.Path,
+					Status:    http.StatusNoContent,
+					Duration:  time.Since(start).String(),
+				}
+				logE.Log(logger)
+				return
+			}
 
 			rw := &ResponseWriter{ResponseWriter: w, status: http.StatusOK}
 			next.ServeHTTP(rw, r)
@@ -79,7 +85,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 
 		switch r.URL.Path {
 		case "/auth/refresh":
-			if token, err := getTokenFromHeader(r, "X-Refresh-Token"); err == nil {
+			if token, err := getTokenFromCookie(r, string(auth.RefreshToken)); err == nil {
 				if claims, err := auth.ExtractClaims(token); err == nil {
 					rw.UserID, _ = claims["sub"].(string)
 				}
@@ -87,7 +93,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 		case "/auth/login":
 			// no token in header
 		default:
-			if token, err := getTokenFromHeader(r, "Authorization"); err == nil {
+			if token, err := getTokenFromCookie(r, string(auth.AccessToken)); err == nil {
 				if claims, err := auth.ExtractClaims(token); err == nil {
 					rw.UserID, _ = claims["sub"].(string)
 				}
@@ -122,7 +128,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 		switch r.URL.Path {
 		case "/auth/refresh":
 			// refresh token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "refresh")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -130,7 +136,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 
 		case "/auth/logout":
 			// access token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -138,7 +144,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 			// refresh token
 			var claims2 jwt.MapClaims
 			var err2 error
-			r, claims2, err2 = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "refresh")
+			r, claims2, err2 = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
 			if err2 != nil {
 				encodeError(r.Context(), err2, w)
 				return
@@ -151,7 +157,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 
 		default:
 			// access token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, "access")
+			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 			if err != nil {
 				encodeError(r.Context(), err, w)
 				return
@@ -175,45 +181,47 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 }
 
 // helpers
-func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey, tokenType string) (*http.Request, jwt.MapClaims, error) {
-	if tokenType == "refresh" {
-		token, err := getTokenFromHeader(r, "X-Refresh-Token")
+func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey string, tk auth.AuthToken) (*http.Request, jwt.MapClaims, error) {
+	switch tk {
+	case auth.RefreshToken:
+		token, err := getTokenFromCookie(r, string(auth.RefreshToken))
 		if err != nil {
-			return r, nil, myerrors.ErrNoRefreshToken
+			return r, nil, err
 		}
-		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tk)
 		if err2 != nil {
 			return r, nil, err2
 		}
 		// add tokens and claims to request.context
 		// this makes them available inside request decoders
-		return setContext(r, governance.RefreshClaimsKey, claims, governance.RefreshTokenKey, token), claims, nil
-	} else {
-		tokenType = "access"
-		token, err := getTokenFromHeader(r, "Authorization")
+		return setContext(r, RefreshClaimsKey, claims, RefreshTokenKey, token), claims, nil
+	default: // auth.AccessToken
+		token, err := getTokenFromCookie(r, string(auth.AccessToken))
 		if err != nil {
-			return r, nil, myerrors.ErrUnauthorized
+			return r, nil, err
 		}
-		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tokenType)
+		claims, err2 := auth.VerifyToken(r.Context(), redisService, token, secretKey, tk)
 		if err2 != nil {
 			return r, nil, err2
 		}
-		return setContext(r, governance.AccessClaimsKey, claims, governance.AccessTokenKey, token), claims, nil
+		return setContext(r, AccessClaimsKey, claims, AccessTokenKey, token), claims, nil
 	}
 }
 
-func getTokenFromHeader(r *http.Request, headerKey string) (string, error) {
-	headerVal := r.Header.Get(headerKey)
-	if headerVal == "" {
-		return "", errors.New("missing header key")
-	}
-	if headerKey == "Authorization" {
-		return auth.ExtractToken(headerVal), nil
-	}
-	return headerVal, nil
+// TODO
+func decrypt(text string) string {
+	return text
 }
 
-func setContext(r *http.Request, claimsKey governance.ContextKey, claimsValue jwt.MapClaims, tokenKey governance.ContextKey, tokenValue string) *http.Request {
+func getTokenFromCookie(r *http.Request, name string) (string, error) {
+	cookie, err := r.Cookie(name)
+	if err != nil || cookie.Valid() != nil {
+		return "", myerrors.ErrUnauthorized
+	}
+	return decrypt(cookie.Value), nil
+}
+
+func setContext(r *http.Request, claimsKey ContextKey, claimsValue jwt.MapClaims, tokenKey ContextKey, tokenValue string) *http.Request {
 	ctx := context.WithValue(r.Context(), claimsKey, claimsValue)
 	ctx = context.WithValue(ctx, tokenKey, tokenValue)
 	return r.WithContext(ctx)

@@ -36,7 +36,7 @@ func NewServiceError(httpCode int, errorCode, message string) *ServiceError {
 var (
 	// standard errors
 	ErrBadRequest       = NewServiceError(http.StatusBadRequest, "BAD_REQUEST", "The request could not be processed due to malformed syntax or missing required parameters.")
-	ErrUnauthorized     = NewServiceError(http.StatusUnauthorized, "UNAUTHORIZED_REQUEST", "Unauthorized request. Please provide a valid Authorization header.")
+	ErrUnauthorized     = NewServiceError(http.StatusUnauthorized, "UNAUTHORIZED_REQUEST", "Unauthorized request. Please provide a valid Authorization cookie.")
 	ErrMethodNotAllowed = NewServiceError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "The requested HTTP method is not allowed for this endpoint.")
 	ErrInternalServer   = NewServiceError(http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 
@@ -63,7 +63,6 @@ var (
 	ErrInvalidSignMethod = NewServiceError(http.StatusUnauthorized, "INVALID_SIGN_METHOD", "The token's signing method is invalid or does not match the expected algorithm. Ensure that the correct signing algorithm is used.")
 	ErrInvalidToken      = NewServiceError(http.StatusUnauthorized, "INVALID_TOKEN", "The provided token is invalid, malformed, or has been tampered with. Please provide a valid token and try again.")
 	ErrInvalidClaims     = NewServiceError(http.StatusUnauthorized, "INVALID_CLAIMS", "The token's claims are invalid, missing required fields, or have an incorrect format. Ensure that the token contains valid claims.")
-	ErrNoRefreshToken    = NewServiceError(http.StatusUnauthorized, "NO_REFRESH_TOKEN", "Unauthorized request. Please provide a valid X-Refresh-Token header.")
 	ErrMismatchedClaims  = NewServiceError(http.StatusUnauthorized, "MISMATCHED_CLAIMS", "The claims in the access and refresh tokens do not match. Please re-authenticate.")
 
 	// auth-Z errors
