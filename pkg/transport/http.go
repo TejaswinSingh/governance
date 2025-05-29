@@ -30,31 +30,31 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 	logger := logging.NewContextLogger(lw, "HttpHandler")
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/governance/healthz", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
-		encodeResponse,
+		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
 	)), "GET"))))
 
-	m.Handle("/auth/login", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(httptransport.NewServer(
+	m.Handle("/auth/login", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
-		encodeResponse,
+		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
 	), "POST"))))
 
-	m.Handle("/auth/logout", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/auth/logout", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
-		encodeResponse,
+		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST"))))
 
-	m.Handle("/auth/refresh", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("/auth/refresh", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
-		encodeResponse,
+		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
 	)), "POST"))))
 
@@ -93,44 +93,41 @@ func decodeHTTPRefreshRequest(ctx context.Context, r *http.Request) (any, error)
 	}, nil
 }
 
-// TODO
-func encrypt(text string) string {
-	return text
-}
+func makeEncodeResponse(envConfig *config.Configuration) httptransport.EncodeResponseFunc {
+	return func(ctx context.Context, w http.ResponseWriter, response any) error {
+		if e, ok := response.(error); ok && e != nil {
+			return e
+		}
 
-func encodeResponse(ctx context.Context, w http.ResponseWriter, response any) error {
-	if e, ok := response.(error); ok && e != nil {
-		return e
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+		// set auth cookies for login and refresh response
+		if resp, ok := response.(interface {
+			GetAccessToken() string
+			GetRefreshToken() string
+		}); ok {
+			auth.SetAuthCookie(w, envConfig.SecretKey, auth.AccessToken, resp.GetAccessToken())
+			auth.SetAuthCookie(w, envConfig.SecretKey, auth.RefreshToken, resp.GetRefreshToken())
+		}
+
+		// clear auth cookies for LogoutResponse
+		if _, ok := response.(endpoints.LogoutResponse); ok {
+			auth.ClearAuthCookie(w, auth.AccessToken)
+			auth.ClearAuthCookie(w, auth.RefreshToken)
+		}
+
+		// write status in header
+		status := http.StatusOK
+		if resp, ok := response.(interface{ GetStatus() int }); ok {
+			status = resp.GetStatus()
+		}
+		w.WriteHeader(status)
+
+		if status == http.StatusNoContent {
+			return nil
+		}
+		return json.NewEncoder(w).Encode(response)
 	}
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	// set auth cookies for login and refresh response
-	if resp, ok := response.(interface {
-		GetAccessToken() string
-		GetRefreshToken() string
-	}); ok {
-		auth.SetAuthCookie(w, auth.AccessToken, encrypt(resp.GetAccessToken()))
-		auth.SetAuthCookie(w, auth.RefreshToken, encrypt(resp.GetRefreshToken()))
-	}
-
-	// clear auth cookies for LogoutResponse
-	if _, ok := response.(endpoints.LogoutResponse); ok {
-		auth.ClearAuthCookie(w, auth.AccessToken)
-		auth.ClearAuthCookie(w, auth.RefreshToken)
-	}
-
-	// write status in header
-	status := http.StatusOK
-	if resp, ok := response.(interface{ GetStatus() int }); ok {
-		status = resp.GetStatus()
-	}
-	w.WriteHeader(status)
-
-	if status == http.StatusNoContent {
-		return nil
-	}
-	return json.NewEncoder(w).Encode(response)
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {

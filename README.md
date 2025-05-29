@@ -12,6 +12,7 @@ USE_HTTPS=false
 
 GOVERNANCE_HTTP_PORT=12001
 GOVERNANCE_GRPC_PORT=9090
+# Note: secret key must be at least 32 bytes
 SECRET_KEY=my-secret-key
 
 # Redis configuration

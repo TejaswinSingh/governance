@@ -20,7 +20,7 @@ const (
 	RefreshTokenExpiry           = time.Hour * 24 * 15 // 15 days
 )
 
-func CreateToken(id, role, secretKey string, token AuthToken, now time.Time) (string, error) {
+func CreateToken(id, role string, secretKey []byte, token AuthToken, now time.Time) (string, error) {
 	var exp time.Duration
 	if token == AccessToken {
 		exp = AccessTokenExpiry
@@ -36,7 +36,7 @@ func CreateToken(id, role, secretKey string, token AuthToken, now time.Time) (st
 		"iat":  now.Unix(),            // Issued at
 	})
 
-	tokenString, err := claims.SignedString([]byte(secretKey))
+	tokenString, err := claims.SignedString(secretKey)
 	if err != nil {
 		return "", errors.ErrCreateJWT.SetInternalErr(err)
 	}
@@ -55,7 +55,7 @@ func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 	return nil, errors.ErrInvalidClaims
 }
 
-func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString, secretKey string, tk AuthToken) (jwt.MapClaims, error) {
+func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString string, secretKey []byte, tk AuthToken) (jwt.MapClaims, error) {
 	if tokenString == "" {
 		return nil, errors.ErrInvalidToken
 	}
@@ -65,7 +65,7 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.ErrInvalidSignMethod
 		}
-		return []byte(secretKey), nil
+		return secretKey, nil
 	}, jwt.WithValidMethods([]string{"HS256"}))
 
 	if err != nil || !token.Valid {
@@ -143,7 +143,7 @@ func BlacklistToken(ctx context.Context, redisService *persist.RedisService, tok
 	return nil
 }
 
-func SetAuthCookie(w http.ResponseWriter, token AuthToken, value string) {
+func SetAuthCookie(w http.ResponseWriter, secretKey []byte, token AuthToken, value string) {
 	var (
 		maxAge  int
 		expires time.Time
@@ -159,7 +159,7 @@ func SetAuthCookie(w http.ResponseWriter, token AuthToken, value string) {
 		expires = time.Now().Add(RefreshTokenExpiry)
 		path = "/auth/"
 	}
-	http.SetCookie(w, &http.Cookie{
+	c := &http.Cookie{
 		Name:     string(token),
 		Domain:   Domain,
 		Path:     path,
@@ -169,7 +169,8 @@ func SetAuthCookie(w http.ResponseWriter, token AuthToken, value string) {
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-	})
+	}
+	WriteEncryptedCookie(w, c, secretKey)
 }
 
 func ClearAuthCookie(w http.ResponseWriter, token AuthToken) {
@@ -180,6 +181,7 @@ func ClearAuthCookie(w http.ResponseWriter, token AuthToken) {
 	case RefreshToken:
 		path = "/auth/"
 	}
+	// no need to encrypt, since value is empty
 	http.SetCookie(w, &http.Cookie{
 		Name:     string(token),
 		Domain:   Domain,

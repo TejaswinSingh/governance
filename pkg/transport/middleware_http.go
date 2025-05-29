@@ -73,7 +73,7 @@ func LoggingMiddleware(logger logging.Logger, corsConfig *CorsOptions, mode conf
 	}
 }
 
-func TracingMiddleware(next http.Handler) http.Handler {
+func TracingMiddleware(envConfig *config.Configuration, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := r.Header.Get("X-Request-ID")
 		if reqID == "" {
@@ -85,7 +85,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 
 		switch r.URL.Path {
 		case "/auth/refresh":
-			if token, err := getTokenFromCookie(r, string(auth.RefreshToken)); err == nil {
+			if token, err := auth.ReadEncryptedCookie(r, string(auth.RefreshToken), envConfig.SecretKey); err == nil {
 				if claims, err := auth.ExtractClaims(token); err == nil {
 					rw.UserID, _ = claims["sub"].(string)
 				}
@@ -93,7 +93,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 		case "/auth/login":
 			// no token in header
 		default:
-			if token, err := getTokenFromCookie(r, string(auth.AccessToken)); err == nil {
+			if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
 				if claims, err := auth.ExtractClaims(token); err == nil {
 					rw.UserID, _ = claims["sub"].(string)
 				}
@@ -181,10 +181,10 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 }
 
 // helpers
-func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey string, tk auth.AuthToken) (*http.Request, jwt.MapClaims, error) {
+func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, secretKey []byte, tk auth.AuthToken) (*http.Request, jwt.MapClaims, error) {
 	switch tk {
 	case auth.RefreshToken:
-		token, err := getTokenFromCookie(r, string(auth.RefreshToken))
+		token, err := auth.ReadEncryptedCookie(r, string(auth.RefreshToken), secretKey)
 		if err != nil {
 			return r, nil, err
 		}
@@ -196,7 +196,7 @@ func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, 
 		// this makes them available inside request decoders
 		return setContext(r, RefreshClaimsKey, claims, RefreshTokenKey, token), claims, nil
 	default: // auth.AccessToken
-		token, err := getTokenFromCookie(r, string(auth.AccessToken))
+		token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), secretKey)
 		if err != nil {
 			return r, nil, err
 		}
@@ -206,19 +206,6 @@ func extractAndVerifyToken(r *http.Request, redisService *persist.RedisService, 
 		}
 		return setContext(r, AccessClaimsKey, claims, AccessTokenKey, token), claims, nil
 	}
-}
-
-// TODO
-func decrypt(text string) string {
-	return text
-}
-
-func getTokenFromCookie(r *http.Request, name string) (string, error) {
-	cookie, err := r.Cookie(name)
-	if err != nil || cookie.Valid() != nil {
-		return "", myerrors.ErrUnauthorized
-	}
-	return decrypt(cookie.Value), nil
 }
 
 func setContext(r *http.Request, claimsKey ContextKey, claimsValue jwt.MapClaims, tokenKey ContextKey, tokenValue string) *http.Request {

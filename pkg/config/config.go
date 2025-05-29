@@ -15,7 +15,7 @@ type Configuration struct {
 	HttpMode   HttpMode
 	HttpPort   string
 	GrpcPort   string
-	SecretKey  string
+	SecretKey  []byte
 	CorsOrigin string
 	Redis      persist.RedisConfiguration
 	Mongo      persist.MongoConfiguration
@@ -40,6 +40,11 @@ func NewEnvironmentConfiguration() Configuration {
 		httpMode = Https
 	}
 
+	secretKey := []byte(requireEnv("SECRET_KEY"))
+	if len(secretKey) < 32 {
+		panic(fmt.Errorf("SECRET_KEY must be at least 32 bytes, got %d", len(secretKey)))
+	}
+
 	redisDB := envInt("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
 	if redisDB < 0 || redisDB > 15 {
 		panic(errors.New("REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15, included"))
@@ -50,7 +55,7 @@ func NewEnvironmentConfiguration() Configuration {
 		HttpMode:   ValidateHttpMode(httpMode),
 		HttpPort:   envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
 		GrpcPort:   envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
-		SecretKey:  requireEnv("SECRET_KEY"),
+		SecretKey:  secretKey,
 		CorsOrigin: envString("CORS_ORIGIN", defaultCORSOrigin),
 		Redis: persist.RedisConfiguration{
 			Host:     envString("REDIS_HOST", defaultRedisHost),
