@@ -122,7 +122,12 @@ func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt
 		return nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, auth.AccessToken)
+	tk, err := auth.DecodeAndDecryptJWT(token, s.envConfig.SecretKey)
+	if err != nil {
+		return fail(errors.ErrUnauthorized)
+	}
+
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, string(tk), s.envConfig.SecretKey, auth.AccessToken)
 	if err != nil {
 		return fail(err)
 	}
@@ -136,7 +141,12 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 		return false, nil, svcErr.HTTPCode, err
 	}
 
-	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, token, s.envConfig.SecretKey, auth.AccessToken)
+	tk, err := auth.DecodeAndDecryptJWT(token, s.envConfig.SecretKey)
+	if err != nil {
+		return fail(errors.ErrUnauthorized)
+	}
+
+	claims, err := auth.VerifyToken(ctx, s.svcStore.Redis, string(tk), s.envConfig.SecretKey, auth.AccessToken)
 	if err != nil {
 		return fail(err)
 	}

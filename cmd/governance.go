@@ -71,7 +71,7 @@ func main() {
 		service     = governance.NewService(&envConfig, store)
 		eps         = endpoints.NewEndpointSet(service)
 		httpHandler = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, lw)
-		grpcServer  = transport.NewGRPCServer(eps, lw)
+		grpcServer  = transport.NewGRPCServer(eps, &envConfig, lw)
 	)
 
 	var g group.Group

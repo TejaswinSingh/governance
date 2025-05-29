@@ -2,9 +2,11 @@ package auth
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"time"
 
+	"github.com/Resolyte-official/service-governance/pkg/cryptoutil"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/golang-jwt/jwt/v5"
@@ -193,4 +195,19 @@ func ClearAuthCookie(w http.ResponseWriter, token AuthToken) {
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	})
+}
+
+func DecodeAndDecryptJWT(token string, secretKey []byte) (string, error) {
+	// base64 decode
+	tk, err := base64.URLEncoding.DecodeString(token)
+	if err != nil {
+		return "", err
+	}
+
+	// decrypt
+	tk, err = cryptoutil.Decrypt(tk, secretKey)
+	if err != nil {
+		return "", err
+	}
+	return string(tk), nil
 }

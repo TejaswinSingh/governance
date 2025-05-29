@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
+	"github.com/Resolyte-official/service-governance/pkg/config"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
@@ -20,7 +21,7 @@ func (f grpcHandlerFunc) ServeGRPC(ctx context.Context, req any) (context.Contex
 	return f(ctx, req)
 }
 
-func grpcLoggingMiddleware(logger logging.Logger, rpc string, next grpctransport.Handler) grpctransport.Handler {
+func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logger, rpc string, next grpctransport.Handler) grpctransport.Handler {
 	return grpcHandlerFunc(func(ctx context.Context, req any) (context.Context, any, error) {
 		start := time.Now()
 
@@ -33,9 +34,10 @@ func grpcLoggingMiddleware(logger logging.Logger, rpc string, next grpctransport
 
 		// log userID if request has a token
 		if r, ok := req.(interface{ GetToken() string }); ok {
-			token := r.GetToken()
-			if claims, err := auth.ExtractClaims(token); err == nil {
-				logE.UserID, _ = claims["sub"].(string)
+			if token, err := auth.DecodeAndDecryptJWT(r.GetToken(), envConfig.SecretKey); err == nil {
+				if claims, err := auth.ExtractClaims(token); err == nil {
+					logE.UserID, _ = claims["sub"].(string)
+				}
 			}
 		}
 
