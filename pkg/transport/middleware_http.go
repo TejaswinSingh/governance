@@ -27,168 +27,158 @@ type CorsOptions struct {
 	AllowCredentials bool     // AllowCredentials indicates whether or not the response to the request can be exposed when the credentials flag is true
 }
 
-func addCorsHeaders(corsConfig *CorsOptions, w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if origin == "" { // non-CORS request
-		return
-	}
-
-	if allowed := slices.Contains(corsConfig.Origins, origin); !allowed {
-		return // not an allowed origin
-	}
-
-	// only set CORS Headers for allowed origins
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
-	w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
-	w.Header().Set("Access-Control-Allow-Credentials", fmt.Sprint(corsConfig.AllowCredentials))
-}
-
-func LoggingMiddleware(logger logging.Logger, corsConfig *CorsOptions, mode config.HttpMode) func(http.Handler) http.Handler {
+func CORS(corsConfig *CorsOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now().UTC()
-
-			addCorsHeaders(corsConfig, w, r)
-
-			// case: preflight request
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusNoContent)
-				logE := &LogEntry{
-					Transport: string(mode),
-					Method:    r.Method,
-					Path:      r.URL.Path,
-					Status:    http.StatusNoContent,
-					Duration:  time.Since(start).String(),
-				}
-				logE.Log(logger)
+			origin := r.Header.Get("Origin")
+			if origin == "" || !slices.Contains(corsConfig.Origins, origin) {
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			rw := &ResponseWriter{ResponseWriter: w, status: http.StatusOK}
-			next.ServeHTTP(rw, r)
+			// only set CORS Headers for allowed origins
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
+			w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
+			w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
+			w.Header().Set("Access-Control-Allow-Credentials", fmt.Sprint(corsConfig.AllowCredentials))
 
-			logE := &LogEntry{
-				Transport: string(mode),
-				Method:    r.Method,
-				Path:      r.URL.Path,
-				RequestID: rw.RequestID,
-				UserID:    rw.UserID,
-				Status:    rw.status,
-				Error:     rw.Err,
-				Duration:  time.Since(start).String(),
+			// preflight request
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
 			}
-			logE.Log(logger)
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
-func TracingMiddleware(envConfig *config.Configuration, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		reqID := r.Header.Get("X-Request-ID")
-		if reqID == "" {
-			encodeError(r.Context(), myerrors.ErrMissingRequestID, w)
-			return
-		}
-		rw, _ := w.(*ResponseWriter) // custom response writer
-		rw.RequestID = reqID
+func TracingAndLoggingMiddleware(logger logging.Logger, envConfig *config.Configuration) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now().UTC()
 
-		switch r.URL.Path {
-		case "/auth/refresh":
-			if token, err := auth.ReadEncryptedCookie(r, string(auth.RefreshToken), envConfig.SecretKey); err == nil {
-				if claims, err := auth.ExtractClaims(token); err == nil {
-					rw.UserID, _ = claims["sub"].(string)
+			rw := &ResponseWriter{ResponseWriter: w, status: http.StatusOK}
+
+			logE := &LogEntry{
+				Transport: string(envConfig.HttpMode),
+				Method:    r.Method,
+				Path:      r.URL.Path,
+			}
+			defer func() {
+				logE.Status = rw.status
+				logE.Error = rw.Err
+				logE.Duration = time.Since(start).String()
+				logE.Log(logger)
+			}()
+
+			// don't trace preflight request
+			if r.Method != http.MethodOptions {
+
+				// requestID is required
+				reqID := r.Header.Get("X-Request-ID")
+				if reqID == "" {
+					encodeError(r.Context(), myerrors.ErrMissingRequestID, rw)
+					return
+				}
+				logE.RequestID = reqID
+
+				// try to obtain userID from token, wherever possible
+				switch r.URL.Path {
+				case "/auth/refresh":
+					if token, err := auth.ReadEncryptedCookie(r, string(auth.RefreshToken), envConfig.SecretKey); err == nil {
+						if claims, err := auth.ExtractClaims(token); err == nil {
+							if sub, ok := claims["sub"].(string); ok {
+								logE.UserID = sub
+							}
+						}
+					}
+				case "/auth/login":
+					// no token in header
+				default:
+					if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
+						if claims, err := auth.ExtractClaims(token); err == nil {
+							if sub, ok := claims["sub"].(string); ok {
+								logE.UserID = sub
+							}
+						}
+					}
 				}
 			}
-		case "/auth/login":
-			// no token in header
-		default:
-			if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
-				if claims, err := auth.ExtractClaims(token); err == nil {
-					rw.UserID, _ = claims["sub"].(string)
+
+			// call next handler
+			next.ServeHTTP(rw, r)
+		})
+	}
+}
+
+func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.ServiceStore) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var (
+				claims jwt.MapClaims
+				err    error
+			)
+
+			// authentication
+			switch r.URL.Path {
+			case "/auth/login": // unprotected paths
+				next.ServeHTTP(w, r)
+				return
+
+			case "/auth/refresh":
+				// refresh token
+				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
+				if err != nil {
+					encodeError(r.Context(), err, w)
+					return
+				}
+
+			case "/auth/logout":
+				// access token
+				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
+				if err != nil {
+					encodeError(r.Context(), err, w)
+					return
+				}
+				// refresh token
+				var claims2 jwt.MapClaims
+				var err2 error
+				r, claims2, err2 = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
+				if err2 != nil {
+					encodeError(r.Context(), err2, w)
+					return
+				}
+				// check that both tokens have the same claims
+				if !auth.CompareJWTClaims(claims, claims2, "sub", "iss", "aud") {
+					encodeError(r.Context(), myerrors.ErrMismatchedClaims, w)
+					return
+				}
+
+			default:
+				// access token
+				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
+				if err != nil {
+					encodeError(r.Context(), err, w)
+					return
 				}
 			}
-		}
-		next.ServeHTTP(w, r)
-	})
-}
 
-func AllowMethods(next http.Handler, allowedMethods ...string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		allowed := make(map[string]struct{})
-		for _, method := range allowedMethods {
-			allowed[method] = struct{}{}
-		}
-		if _, ok := allowed[r.Method]; !ok {
-			encodeError(r.Context(), myerrors.ErrMethodNotAllowed, w)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.ServiceStore, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var (
-			claims jwt.MapClaims
-			err    error
-		)
-
-		// authentication
-		switch r.URL.Path {
-		case "/auth/refresh":
-			// refresh token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
-			if err != nil {
+			// authorization
+			role, _ := claims["aud"].(string)
+			ok, err := svcStore.Casbin.CheckPermission(role, r.URL.Path, r.Method)
+			if err != nil { // casbin errors
 				encodeError(r.Context(), err, w)
 				return
 			}
-
-		case "/auth/logout":
-			// access token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-			// refresh token
-			var claims2 jwt.MapClaims
-			var err2 error
-			r, claims2, err2 = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
-			if err2 != nil {
-				encodeError(r.Context(), err2, w)
-				return
-			}
-			// check that both tokens have the same claims
-			if !auth.CompareJWTClaims(claims, claims2, "sub", "iss", "aud") {
-				encodeError(r.Context(), myerrors.ErrMismatchedClaims, w)
+			if !ok { // denied
+				encodeError(r.Context(), myerrors.ErrAccessDenied, w)
 				return
 			}
 
-		default:
-			// access token
-			r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
-			if err != nil {
-				encodeError(r.Context(), err, w)
-				return
-			}
-		}
-
-		// authorization
-		role, _ := claims["aud"].(string)
-		ok, err := svcStore.Casbin.CheckPermission(role, r.URL.Path, r.Method)
-		if err != nil { // casbin errors
-			encodeError(r.Context(), err, w)
-			return
-		}
-		if !ok { // denied
-			encodeError(r.Context(), myerrors.ErrAccessDenied, w)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // helpers

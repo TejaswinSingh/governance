@@ -13,10 +13,8 @@ import (
 
 type ResponseWriter struct {
 	http.ResponseWriter
-	status    int
-	Err       string
-	RequestID string
-	UserID    string
+	status int
+	Err    string
 }
 
 func (rw *ResponseWriter) WriteHeader(status int) {

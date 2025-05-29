@@ -27,38 +27,43 @@ const (
 )
 
 func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, svcStore *governance.ServiceStore, lw logging.LogWriter) http.Handler {
-	logger := logging.NewContextLogger(lw, "HttpHandler")
 	m := http.NewServeMux()
 
-	m.Handle("/governance/healthz", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("GET /governance/healthz", httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		makeEncodeResponse(envConfig),
-		httptransport.ServerErrorEncoder(encodeError), // this will be called if error occurs at any point
-	)), "GET"))))
+		httptransport.ServerErrorEncoder(encodeError), // called automatically if error occurs in either of the following: decoder, endpoint, encoder
+	))
 
-	m.Handle("/auth/login", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(httptransport.NewServer(
+	m.Handle("POST /auth/login", httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	), "POST"))))
+	))
 
-	m.Handle("/auth/logout", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("POST /auth/logout", httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))))
+	))
 
-	m.Handle("/auth/refresh", LoggingMiddleware(logger, corsConfig, envConfig.HttpMode)(TracingMiddleware(envConfig, AllowMethods(AuthMiddleware(envConfig, svcStore, httptransport.NewServer(
+	m.Handle("POST /auth/refresh", httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	)), "POST"))))
+	))
 
-	return m
+	logger := logging.NewContextLogger(lw, "HttpHandler")
+
+	handler := AuthMiddleware(envConfig, svcStore)(m)
+	handler = CORS(corsConfig)(handler)
+	handler = TracingAndLoggingMiddleware(logger, envConfig)(handler)
+
+	return handler
 }
 
 func decodeHTTPServiceStatusRequest(_ context.Context, _ *http.Request) (any, error) {

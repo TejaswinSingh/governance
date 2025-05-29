@@ -51,10 +51,9 @@ func NewServiceError(httpCode int, errorCode, message string) *ServiceError {
 
 var (
 	// standard errors
-	ErrBadRequest       = NewServiceError(http.StatusBadRequest, "BAD_REQUEST", "The request could not be processed due to malformed syntax or missing required parameters.")
-	ErrUnauthorized     = NewServiceError(http.StatusUnauthorized, "UNAUTHORIZED_REQUEST", "Unauthorized request. Please provide a valid Authorization cookie.")
-	ErrMethodNotAllowed = NewServiceError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "The requested HTTP method is not allowed for this endpoint.")
-	ErrInternalServer   = NewServiceError(http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
+	ErrBadRequest     = NewServiceError(http.StatusBadRequest, "BAD_REQUEST", "The request could not be processed due to malformed syntax or missing required parameters.")
+	ErrUnauthorized   = NewServiceError(http.StatusUnauthorized, "UNAUTHORIZED_REQUEST", "Unauthorized request. Please provide a valid Authorization cookie.")
+	ErrInternalServer = NewServiceError(http.StatusInternalServerError, "INTERNAL_SERVER_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 
 	// jwt errors
 	ErrCreateJWT = NewServiceError(http.StatusInternalServerError, "JWT_CREATION_ERROR", "Failed to generate a token due to an internal processing error. Please try again or contact support if the issue persists.")
