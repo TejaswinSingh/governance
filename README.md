@@ -27,7 +27,7 @@ MONGO_PORT=27017
 MONGODB_INITDB_ROOT_USERNAME=admin
 MONGODB_INITDB_ROOT_PASSWORD=mymongopassword
 
-CORS_ORIGIN=http://127.0.0.1:5500
+CORS_ORIGINS=https://abcdery.com, http://127.0.0.1:5500
 ```
 
 ## HTTPS Setup

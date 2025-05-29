@@ -56,7 +56,7 @@ func main() {
 
 	var (
 		corsConfig = &transport.CorsOptions{
-			Origin:           envConfig.CorsOrigin,                                                                    // Allow only specified origin
+			Origins:          envConfig.CorsOrigins,                                                                   // Allow only specified origin
 			Methods:          []string{"GET", "POST", "OPTIONS", "PUT", "UPDATE", "DELETE"},                           // Allow common HTTP methods
 			Headers:          []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "X-Request-ID"}, // Allow common HTTP headers
 			ExposeHeaders:    []string{"Content-Type", "X-Request-ID"},                                                // Allow any headers to be exposed

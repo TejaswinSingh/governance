@@ -5,24 +5,25 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 )
 
 // Configuration .
 type Configuration struct {
-	Env        GoEnv
-	HttpMode   HttpMode
-	HttpPort   string
-	GrpcPort   string
-	SecretKey  []byte
-	CorsOrigin string
-	Redis      persist.RedisConfiguration
-	Mongo      persist.MongoConfiguration
+	Env         GoEnv
+	HttpMode    HttpMode
+	HttpPort    string
+	GrpcPort    string
+	SecretKey   []byte
+	CorsOrigins []string
+	Redis       persist.RedisConfiguration
+	Mongo       persist.MongoConfiguration
 }
 
 const (
-	defaultCORSOrigin    = "http://127.0.0.1:5500"
+	defaultCORSOrigin    = ""
 	defaultHTTPPort      = "12001"
 	defaultGRPCPort      = "9090"
 	defaultRedisHost     = "redis"
@@ -51,12 +52,12 @@ func NewEnvironmentConfiguration() Configuration {
 	}
 
 	return Configuration{
-		Env:        ValidateEnv(GoEnv(os.Getenv("ENV"))),
-		HttpMode:   ValidateHttpMode(httpMode),
-		HttpPort:   envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
-		GrpcPort:   envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
-		SecretKey:  secretKey,
-		CorsOrigin: envString("CORS_ORIGIN", defaultCORSOrigin),
+		Env:         ValidateEnv(GoEnv(os.Getenv("ENV"))),
+		HttpMode:    ValidateHttpMode(httpMode),
+		HttpPort:    envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
+		GrpcPort:    envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
+		SecretKey:   secretKey,
+		CorsOrigins: parseStringsEnv("CORS_ORIGINS", []string{defaultCORSOrigin}),
 		Redis: persist.RedisConfiguration{
 			Host:     envString("REDIS_HOST", defaultRedisHost),
 			Port:     envString("REDIS_PORT", defaultRedisPort),
@@ -74,14 +75,15 @@ func NewEnvironmentConfiguration() Configuration {
 
 func envString(key, fallback string) string {
 	e, ok := os.LookupEnv(key)
-	if e == "" || !ok {
+	val := strings.TrimSpace(e)
+	if !ok || val == "" {
 		return fallback
 	}
-	return e
+	return val
 }
 
 func envBool(key string, fallback bool) bool {
-	val, err := strconv.ParseBool(os.Getenv(key))
+	val, err := strconv.ParseBool(strings.TrimSpace(os.Getenv(key)))
 	if err != nil {
 		return fallback
 	}
@@ -89,17 +91,34 @@ func envBool(key string, fallback bool) bool {
 }
 
 func envInt(key string, fallback int) int {
-	val, err := strconv.Atoi(os.Getenv(key))
+	val, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
 	if err != nil {
 		return fallback
 	}
 	return val
 }
 
-func requireEnv(env string) string {
-	e, ok := os.LookupEnv(env)
-	if e == "" || !ok {
-		panic(fmt.Errorf("invalid environment configuration: %s is required", env))
+func requireEnv(key string) string {
+	val, ok := os.LookupEnv(key)
+	val = strings.TrimSpace(val)
+	if !ok || val == "" {
+		panic(fmt.Errorf("invalid environment configuration: %s is required", key))
 	}
-	return e
+	return val
+}
+
+func parseStringsEnv(key string, fallback []string) []string {
+	val, ok := os.LookupEnv(key)
+	if !ok || val == "" {
+		return fallback
+	}
+	parts := strings.Split(val, ",")
+	var strs []string
+	for _, o := range parts {
+		trimmed := strings.TrimSpace(o)
+		if trimmed != "" {
+			strs = append(strs, trimmed)
+		}
+	}
+	return strs
 }

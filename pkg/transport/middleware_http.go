@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -19,15 +20,25 @@ import (
 
 // CorsOptions defines the structure for CORS configuration options
 type CorsOptions struct {
-	Origin           string   // Origin specifies the origin that is allowed to access the resource
+	Origins          []string // Origins is a list of origins that are allowed to access the resource
 	Methods          []string // Methods is a list of HTTP methods allowed when accessing the resource
 	Headers          []string // Headers is a list of HTTP headers that can be used when making the actual request
 	ExposeHeaders    []string // ExposeHeaders indicates which headers are safe to expose to the API of a CORS API specification
 	AllowCredentials bool     // AllowCredentials indicates whether or not the response to the request can be exposed when the credentials flag is true
 }
 
-func addCorsHeaders(corsConfig *CorsOptions, w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", corsConfig.Origin)
+func addCorsHeaders(corsConfig *CorsOptions, w http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if origin == "" { // non-CORS request
+		return
+	}
+
+	if allowed := slices.Contains(corsConfig.Origins, origin); !allowed {
+		return // not an allowed origin
+	}
+
+	// only set CORS Headers for allowed origins
+	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join(corsConfig.Methods, ", "))
 	w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConfig.Headers, ", "))
 	w.Header().Set("Access-Control-Expose-Headers", strings.Join(corsConfig.ExposeHeaders, ", "))
@@ -39,7 +50,7 @@ func LoggingMiddleware(logger logging.Logger, corsConfig *CorsOptions, mode conf
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
 
-			addCorsHeaders(corsConfig, w)
+			addCorsHeaders(corsConfig, w, r)
 
 			// case: preflight request
 			if r.Method == "OPTIONS" {
