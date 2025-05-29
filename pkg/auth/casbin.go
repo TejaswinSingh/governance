@@ -48,14 +48,14 @@ func NewService(mongoURI string) (*CasbinService, error) {
 func (cb *CasbinService) CheckPermission(sub, obj, act string) (bool, error) {
 	eft, err := cb.enforcer.Enforce(sub, obj, act)
 	if err != nil {
-		return false, errors.ErrCasbinEnforcement.SetInternalErr(err)
+		return false, errors.ErrCasbinEnforcement.WithInternalErr(err)
 	}
 	return eft, nil
 }
 
 func (cb *CasbinService) LoadPolicy() error {
 	if err := cb.enforcer.LoadPolicy(); err != nil {
-		return errors.ErrCasbinPolicyLoad.SetInternalErr(err)
+		return errors.ErrCasbinPolicyLoad.WithInternalErr(err)
 	}
 	return nil
 }

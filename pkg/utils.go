@@ -42,13 +42,13 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 	res, err := s.svcStore.Mongo.FindOne(ctx, coll, filter)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return nil, myerrors.ErrMetaData.SetInternalErr(err)
+			return nil, myerrors.ErrMissingMetaData.WithInternalErr(err)
 		}
 		return nil, err
 	}
 	var doc bson.M
 	if err := res.Decode(&doc); err != nil {
-		return nil, myerrors.ErrMongo.SetInternalErr(err)
+		return nil, myerrors.ErrMongo.WithInternalErr(err)
 	}
 	return doc, nil
 }
@@ -62,7 +62,7 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*
 
 	userUUID, err := uuidStrToBinary(userID)
 	if err != nil {
-		return nil, myerrors.ErrMetaData.SetInternalErr(err)
+		return nil, myerrors.ErrMetaData.WithInternalErr(err)
 	}
 
 	// Fetch user

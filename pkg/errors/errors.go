@@ -16,9 +16,25 @@ func (e *ServiceError) Error() string {
 	return fmt.Sprintf("%s: %s", e.ErrorCode, e.Message)
 }
 
-func (e *ServiceError) SetInternalErr(err error) *ServiceError {
-	e.InternalErr = err
-	return e
+func (e *ServiceError) WithInternalErr(err error) *ServiceError {
+	return &ServiceError{
+		InternalErr: err,
+		HTTPCode:    e.HTTPCode,
+		ErrorCode:   e.ErrorCode,
+		Message:     e.Message,
+	}
+}
+
+func (e *ServiceError) Is(target error) bool {
+	t, ok := target.(*ServiceError)
+	if !ok {
+		return false
+	}
+	return e.ErrorCode == t.ErrorCode
+}
+
+func (e *ServiceError) Unwrap() error {
+	return e.InternalErr
 }
 
 func (e *ServiceError) DetailedError() string {
@@ -52,7 +68,8 @@ var (
 	ErrMongo = NewServiceError(http.StatusInternalServerError, "MONGO_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 
 	// meta data errors
-	ErrMetaData = NewServiceError(http.StatusInternalServerError, "METADATA_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
+	ErrMissingMetaData = NewServiceError(http.StatusNotFound, "MISSING_METADATA", "Required metadata was not found on the server.")
+	ErrMetaData        = NewServiceError(http.StatusInternalServerError, "METADATA_ERROR", "An unexpected error occurred on the server. Please try again later or contact support if the issue persists.")
 
 	// grpc errors
 	ErrGRPCBadRequest = NewServiceError(http.StatusBadRequest, "GRPC_BAD_REQUEST", "Missing required fields in gRPC request.")

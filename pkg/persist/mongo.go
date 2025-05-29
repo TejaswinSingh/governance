@@ -64,7 +64,7 @@ func (m *MongoService) FindOne(ctx context.Context, coll *mongo.Collection, filt
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, err
 		}
-		return nil, myerrors.ErrMongo.SetInternalErr(err)
+		return nil, myerrors.ErrMongo.WithInternalErr(err)
 	}
 	return res, nil
 }

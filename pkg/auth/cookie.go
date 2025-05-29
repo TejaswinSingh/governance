@@ -36,13 +36,13 @@ func ReadEncryptedCookie(r *http.Request, name string, secretKey []byte) (string
 	// base64 decode
 	value, err := base64.URLEncoding.DecodeString(cookie.Value)
 	if err != nil {
-		return "", errors.ErrUnauthorized.SetInternalErr(err)
+		return "", errors.ErrUnauthorized.WithInternalErr(err)
 	}
 
 	// decrypt cookie
 	cookieVal, err := cryptoutil.Decrypt(value, secretKey)
 	if err != nil {
-		return "", errors.ErrUnauthorized.SetInternalErr(err)
+		return "", errors.ErrUnauthorized.WithInternalErr(err)
 	}
 
 	return string(cookieVal), nil

@@ -3,11 +3,12 @@ package auth
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/cryptoutil"
-	"github.com/Resolyte-official/service-governance/pkg/errors"
+	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -40,7 +41,7 @@ func CreateToken(id, role string, secretKey []byte, token AuthToken, now time.Ti
 
 	tokenString, err := claims.SignedString(secretKey)
 	if err != nil {
-		return "", errors.ErrCreateJWT.SetInternalErr(err)
+		return "", myerrors.ErrCreateJWT.WithInternalErr(err)
 	}
 
 	return tokenString, nil
@@ -49,49 +50,49 @@ func CreateToken(id, role string, secretKey []byte, token AuthToken, now time.Ti
 func ExtractClaims(tokenStr string) (jwt.MapClaims, error) {
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenStr, jwt.MapClaims{})
 	if err != nil {
-		return nil, errors.ErrInvalidToken.SetInternalErr(err)
+		return nil, myerrors.ErrInvalidToken.WithInternalErr(err)
 	}
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		return claims, nil
 	}
-	return nil, errors.ErrInvalidClaims
+	return nil, myerrors.ErrInvalidClaims
 }
 
 func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenString string, secretKey []byte, tk AuthToken) (jwt.MapClaims, error) {
 	if tokenString == "" {
-		return nil, errors.ErrInvalidToken
+		return nil, myerrors.ErrInvalidToken
 	}
 
 	// validate signing method
 	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.ErrInvalidSignMethod
+			return nil, myerrors.ErrInvalidSignMethod
 		}
 		return secretKey, nil
 	}, jwt.WithValidMethods([]string{"HS256"}))
 
 	if err != nil || !token.Valid {
-		return nil, errors.ErrInvalidToken
+		return nil, myerrors.ErrInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, errors.ErrInvalidClaims
+		return nil, myerrors.ErrInvalidClaims
 	}
 
 	// validate token expiration
 	expTime, ok := claims["exp"].(float64) // JWT stores exp as float64
 	if !ok {
-		return nil, errors.ErrInvalidClaims
+		return nil, myerrors.ErrInvalidClaims
 	}
 	if time.Now().Unix() > int64(expTime) {
-		return nil, errors.ErrInvalidToken
+		return nil, myerrors.ErrInvalidToken
 	}
 
 	// validate token type
 	tokenTypeClaim, ok := claims["type"].(string)
 	if !ok || tokenTypeClaim != string(tk) {
-		return nil, errors.ErrInvalidClaims
+		return nil, myerrors.ErrInvalidClaims
 	}
 
 	// validate token subject
@@ -99,22 +100,22 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 	// querying mongodb or the query-engine service
 	sub, ok := claims["sub"].(string)
 	if !ok || sub == "" {
-		return nil, errors.ErrInvalidClaims
+		return nil, myerrors.ErrInvalidClaims
 	}
 
 	// validate aud(role)
 	aud, ok := claims["aud"].(string)
 	if !ok || aud == "" {
-		return nil, errors.ErrInvalidClaims
+		return nil, myerrors.ErrInvalidClaims
 	}
 
 	// validate that token is not blacklisted
 	val, err := redisService.Get(ctx, tokenString)
-	if err != nil && err != errors.ErrRedisKeyNotExist {
+	if err != nil && !errors.Is(err, myerrors.ErrRedisKeyNotExist) {
 		return nil, err
 	}
 	if err == nil && val == "blacklisted" {
-		return nil, errors.ErrInvalidToken
+		return nil, myerrors.ErrInvalidToken
 	}
 
 	return claims, nil
@@ -135,7 +136,7 @@ func CompareJWTClaims(c1, c2 jwt.MapClaims, keys ...string) bool {
 func BlacklistToken(ctx context.Context, redisService *persist.RedisService, token string, claims jwt.MapClaims) error {
 	expTime, ok := claims["exp"].(float64)
 	if !ok {
-		return errors.ErrInvalidClaims
+		return myerrors.ErrInvalidClaims
 	}
 	expirationDuration := time.Until(time.Unix(int64(expTime), 0))
 	err := redisService.Set(ctx, token, "blacklisted", expirationDuration)
