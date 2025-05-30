@@ -3,12 +3,20 @@ package governance
 import (
 	"context"
 
+	"github.com/Resolyte-official/service-governance/pkg/auth"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/persist"
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
+
+type ServiceStore struct {
+	Redis  *persist.RedisService
+	Mongo  *persist.MongoService
+	Casbin *auth.CasbinService
+}
 
 func uuidStrToBinary(u string) (bson.Binary, error) {
 	parsed, err := uuid.Parse(u)

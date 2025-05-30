@@ -3,8 +3,6 @@ package governance
 import (
 	"context"
 
-	"github.com/Resolyte-official/service-governance/pkg/auth"
-	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -16,10 +14,4 @@ type Service interface {
 	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
 	Authenticate(ctx context.Context, token string) (claims jwt.MapClaims, status int, err error)
 	Authorize(ctx context.Context, token, obj, act string) (eft bool, claims jwt.MapClaims, status int, err error)
-}
-
-type ServiceStore struct {
-	Redis  *persist.RedisService
-	Mongo  *persist.MongoService
-	Casbin *auth.CasbinService
 }
