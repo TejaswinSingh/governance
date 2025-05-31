@@ -50,8 +50,8 @@ func (e *LogEntry) Log(logger logging.Logger) {
 		switch fieldVal.Kind() {
 		case reflect.String:
 			val := fieldVal.String()
-			// skip 500 errors, they are logged below explicitly
-			if val != "" && !(tag == "error" && e.Status >= 500) {
+			// skip error field, it is logged below explicitly
+			if val != "" && tag != "error" {
 				keyVals[tag] = val
 			}
 		case reflect.Int:
@@ -60,10 +60,12 @@ func (e *LogEntry) Log(logger logging.Logger) {
 			}
 		}
 	}
-	if e.Status >= 500 {
-		logger.ErrorMap(errors.New(e.Error), keyVals)
-	} else {
+	if e.Status <= 300 {
 		logger.InfoMap(keyVals)
+	} else if e.Status >= 400 && e.Status < 500 { // no stack trace for 400 errors
+		logger.ErrorNtMap(errors.New(e.Error), keyVals)
+	} else { // 500 errors
+		logger.ErrorMap(errors.New(e.Error), keyVals)
 	}
 }
 

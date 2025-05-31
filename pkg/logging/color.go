@@ -30,10 +30,10 @@ func getLevelColor(level Level) LevelColor {
 	}
 }
 
-func colorizeDebugStack(stack string) string {
-	lines := strings.Split(stack, "\n")
+func colorizeLog(logText string, color LevelColor) string {
+	lines := strings.Split(logText, "\n")
 	for i, line := range lines {
-		lines[i] = fmt.Sprintf("%s%s%s", RED, line, RESET)
+		lines[i] = fmt.Sprintf("%s%s%s", color, line, RESET)
 	}
 	return strings.Join(lines, "\n")
 }
