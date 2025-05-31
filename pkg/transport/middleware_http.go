@@ -30,8 +30,14 @@ type CorsOptions struct {
 func CORS(corsConfig *CorsOptions) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 			origin := r.Header.Get("Origin")
+
 			if origin == "" || !slices.Contains(corsConfig.Origins, origin) {
+				if r.Method == http.MethodOptions { // preflight request
+					w.WriteHeader(http.StatusNoContent)
+					return
+				}
 				next.ServeHTTP(w, r)
 				return
 			}
