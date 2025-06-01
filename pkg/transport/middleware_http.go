@@ -14,6 +14,7 @@ import (
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
+	"github.com/google/uuid"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -85,6 +86,10 @@ func TracingAndLoggingMiddleware(logger logging.Logger, envConfig *config.Config
 				reqID := r.Header.Get("X-Request-ID")
 				if reqID == "" {
 					encodeError(r.Context(), myerrors.ErrMissingRequestID, rw)
+					return
+				}
+				if uuid.Validate(reqID) != nil {
+					encodeError(r.Context(), myerrors.ErrInvalidRequestID, rw)
 					return
 				}
 				logE.RequestID = reqID

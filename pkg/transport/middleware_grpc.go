@@ -12,6 +12,7 @@ import (
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
+	"github.com/google/uuid"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -41,14 +42,26 @@ func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logge
 			}
 		}
 
-		ctx, resp, err := next.ServeGRPC(ctx, req)
+		var (
+			reqID string
+			err   error
+			resp  any
+		)
 
 		// look for request ID in metadata
 		if md, ok := metadata.FromIncomingContext(ctx); ok {
 			requestIDs := md.Get("X-Request-ID")
 			if len(requestIDs) > 0 {
-				logE.RequestID = requestIDs[0]
+				reqID = requestIDs[0]
 			}
+		}
+		if reqID == "" {
+			err = myerrors.ErrMissingRequestID
+		} else if uuid.Validate(reqID) != nil {
+			err = myerrors.ErrInvalidRequestID
+		} else {
+			logE.RequestID = reqID
+			ctx, resp, err = next.ServeGRPC(ctx, req)
 		}
 
 		if err != nil {

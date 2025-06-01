@@ -10,7 +10,6 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -42,20 +41,6 @@ func NewGRPCServer(ep endpoints.Set, envConfig *config.Configuration, lw logging
 	}
 }
 
-func checkHeader(ctx context.Context) error {
-	var reqID string
-	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		requestIDs := md.Get("X-Request-ID")
-		if len(requestIDs) > 0 {
-			reqID = requestIDs[0]
-		}
-	}
-	if reqID == "" {
-		return myerrors.ErrMissingRequestID
-	}
-	return nil
-}
-
 func (g *grpcServer) ServiceStatus(ctx context.Context, r *pb.ServiceStatusRequest) (*pb.ServiceStatusResponse, error) {
 	_, resp, err := g.serviceStatus.ServeGRPC(ctx, r)
 	if err != nil {
@@ -81,16 +66,10 @@ func (g *grpcServer) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb
 }
 
 func decodeGRPCServiceStatusRequest(ctx context.Context, grpcReq any) (any, error) {
-	if err := checkHeader(ctx); err != nil {
-		return nil, err
-	}
 	return endpoints.ServiceStatusRequest{}, nil
 }
 
 func decodeGRPCAuthenticateRequest(ctx context.Context, grpcReq any) (any, error) {
-	if err := checkHeader(ctx); err != nil {
-		return nil, err
-	}
 	req := grpcReq.(*pb.AuthenticateRequest)
 	if req.Token == "" {
 		return nil, myerrors.ErrGRPCBadRequest
@@ -99,9 +78,6 @@ func decodeGRPCAuthenticateRequest(ctx context.Context, grpcReq any) (any, error
 }
 
 func decodeGRPCAuthorizeRequest(ctx context.Context, grpcReq any) (any, error) {
-	if err := checkHeader(ctx); err != nil {
-		return nil, err
-	}
 	req := grpcReq.(*pb.AuthorizeRequest)
 	if req.Token == "" || req.Act == "" || req.Obj == "" {
 		return nil, myerrors.ErrGRPCBadRequest
