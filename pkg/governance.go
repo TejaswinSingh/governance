@@ -96,7 +96,7 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 
 	// create new tokens
 	id, _ := claimsRefresh["sub"].(string)
-	role, _ := claimsRefresh["aud"].(string)
+	role, _ := claimsRefresh["role"].(string)
 	now := time.Now()
 	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
@@ -153,7 +153,7 @@ func (s *governanceService) Authorize(ctx context.Context, token, obj, act strin
 
 	// Note: sub here refers to the subject in Casbin's model definition,
 	// and not the sub in jwt claims
-	sub, _ := claims["aud"].(string)
+	sub, _ := claims["role"].(string)
 
 	eft, err := s.svcStore.Casbin.CheckPermission(sub, obj, act)
 	if err != nil {

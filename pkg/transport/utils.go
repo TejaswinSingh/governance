@@ -77,6 +77,7 @@ func toPBClaims(m jwt.MapClaims) *pb.Claims {
 		Iat:  getInt64Claim(m, "iat"),
 		Exp:  getInt64Claim(m, "exp"),
 		Type: getStringClaim(m, "type"),
+		Role: getStringClaim(m, "role"),
 	}
 }
 

@@ -34,7 +34,8 @@ func CreateToken(id, role string, secretKey []byte, token AuthToken, now time.Ti
 		"type": string(token),         // Type of token
 		"sub":  id,                    // Subject (user identifier)
 		"iss":  "resolyte.governance", // Issuer
-		"aud":  role,                  // Audience (user role)
+		"aud":  "resolyte.users",      // Audience
+		"role": role,                  // user role
 		"exp":  now.Add(exp).Unix(),   // Expiration time
 		"iat":  now.Unix(),            // Issued at
 	})
@@ -103,9 +104,15 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 		return nil, myerrors.ErrInvalidClaims
 	}
 
-	// validate aud(role)
+	// validate aud
 	aud, ok := claims["aud"].(string)
 	if !ok || aud == "" {
+		return nil, myerrors.ErrInvalidClaims
+	}
+
+	// validate role
+	role, ok := claims["role"].(string)
+	if !ok || role == "" {
 		return nil, myerrors.ErrInvalidClaims
 	}
 

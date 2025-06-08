@@ -29,6 +29,7 @@ type Claims struct {
 	Iat           int64                  `protobuf:"varint,4,opt,name=iat,proto3" json:"iat,omitempty"`
 	Exp           int64                  `protobuf:"varint,5,opt,name=exp,proto3" json:"exp,omitempty"`
 	Type          string                 `protobuf:"bytes,6,opt,name=type,proto3" json:"type,omitempty"`
+	Role          string                 `protobuf:"bytes,7,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -101,6 +102,13 @@ func (x *Claims) GetExp() int64 {
 func (x *Claims) GetType() string {
 	if x != nil {
 		return x.Type
+	}
+	return ""
+}
+
+func (x *Claims) GetRole() string {
+	if x != nil {
+		return x.Role
 	}
 	return ""
 }
@@ -421,14 +429,15 @@ var File_pkg_pb_governance_proto protoreflect.FileDescriptor
 
 const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\n" +
-	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"v\n" +
+	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"\x8a\x01\n" +
 	"\x06Claims\x12\x10\n" +
 	"\x03sub\x18\x01 \x01(\tR\x03sub\x12\x10\n" +
 	"\x03aud\x18\x02 \x01(\tR\x03aud\x12\x10\n" +
 	"\x03iss\x18\x03 \x01(\tR\x03iss\x12\x10\n" +
 	"\x03iat\x18\x04 \x01(\x03R\x03iat\x12\x10\n" +
 	"\x03exp\x18\x05 \x01(\x03R\x03exp\x12\x12\n" +
-	"\x04type\x18\x06 \x01(\tR\x04type\"\x16\n" +
+	"\x04type\x18\x06 \x01(\tR\x04type\x12\x12\n" +
+	"\x04role\x18\a \x01(\tR\x04role\"\x16\n" +
 	"\x14ServiceStatusRequest\"/\n" +
 	"\x15ServiceStatusResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\x03R\x06status\"+\n" +

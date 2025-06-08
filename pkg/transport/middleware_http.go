@@ -161,7 +161,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 					return
 				}
 				// check that both tokens have the same claims
-				if !auth.CompareJWTClaims(claims, claims2, "sub", "iss", "aud") {
+				if !auth.CompareJWTClaims(claims, claims2, "sub", "iss", "aud", "role") {
 					encodeError(r.Context(), myerrors.ErrMismatchedClaims, w)
 					return
 				}
@@ -176,7 +176,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 			}
 
 			// authorization
-			role, _ := claims["aud"].(string)
+			role, _ := claims["role"].(string)
 			ok, err := svcStore.Casbin.CheckPermission(role, r.URL.Path, r.Method)
 			if err != nil { // casbin errors
 				encodeError(r.Context(), err, w)

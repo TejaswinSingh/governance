@@ -17,6 +17,7 @@ message Claims {
     int64 iat = 4;
     int64 exp = 5;
     string type = 6;
+    string role = 7;
 }
 
 message ServiceStatusRequest {}
