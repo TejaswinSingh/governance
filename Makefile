@@ -4,7 +4,7 @@ TAG ?= latest
 
 generate_cert:
 	go run $(shell go env GOROOT)/src/crypto/tls/generate_cert.go --host localhost --ca true
-	mv cert.pem key.pem ./config/
+	mv cert.pem key.pem ./configs/
 
 update_gomod:
 	go get -u ./...

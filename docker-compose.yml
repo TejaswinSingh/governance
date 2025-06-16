@@ -15,7 +15,7 @@ services:
     networks:
       - governance_network
     volumes:
-      - ./config:/root/config
+      - ./configs:/root/configs
 
   redis:
     image: "redis:7.4.2"

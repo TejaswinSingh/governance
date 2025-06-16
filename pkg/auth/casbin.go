@@ -16,7 +16,7 @@ type CasbinService struct {
 
 func NewService(mongoURI string) (*CasbinService, error) {
 	// load auth model
-	m, err := model.NewModelFromFile("config/auth_model.conf")
+	m, err := model.NewModelFromFile("configs/auth_model.conf")
 	if err != nil {
 		return nil, err
 	}

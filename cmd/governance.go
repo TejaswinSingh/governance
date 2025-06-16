@@ -37,10 +37,10 @@ func main() {
 
 	mainLogger.Infof("starting governance in %s mode", envConfig.Env)
 
-	requireFile("config/auth_model.conf")
+	requireFile("configs/auth_model.conf")
 	if envConfig.HttpMode.IsHttps() { // need certs
-		requireFile("config/cert.pem")
-		requireFile("config/key.pem")
+		requireFile("configs/cert.pem")
+		requireFile("configs/key.pem")
 	}
 
 	mongoURI := persist.CreateMongoURI(&envConfig.Mongo)
@@ -86,7 +86,7 @@ func main() {
 		g.Add(func() error {
 			mainLogger.Infof("starting %s server on %s", envConfig.HttpMode, httpAddr)
 			if envConfig.HttpMode.IsHttps() {
-				return srv.ListenAndServeTLS("config/cert.pem", "config/key.pem")
+				return srv.ListenAndServeTLS("configs/cert.pem", "configs/key.pem")
 			}
 			// http
 			return srv.ListenAndServe()

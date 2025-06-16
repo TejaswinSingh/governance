@@ -14,6 +14,6 @@ FROM alpine:3.21.3
 WORKDIR /root/
 
 COPY --from=builder /app/governance /root/
-COPY --from=builder /app/config /root/config/
+COPY --from=builder /app/configs /root/configs/
 
 CMD ["/root/governance"]
