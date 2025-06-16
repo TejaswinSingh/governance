@@ -3,29 +3,37 @@
 TAG ?= latest
 
 generate_cert:
-	go run $(shell go env GOROOT)/src/crypto/tls/generate_cert.go --host localhost --ca true
-	mv cert.pem key.pem ./configs/
+	@go run $(shell go env GOROOT)/src/crypto/tls/generate_cert.go --host localhost --ca true
+	@mkdir -p configs
+	@mv cert.pem key.pem ./configs/
+	@echo "certs generated at configs/cert.pem and configs/key.pem"
 
 update_gomod:
-	go get -u ./...
-	go mod tidy
+	@echo "Updating go modules..."
+	@go get -u ./...
+	@go mod tidy
 
 build_proto:
-	protoc --go_out=. --go_opt=paths=source_relative \
+	@echo "Compiling protobuf: pkg/pb/governance.proto"
+	@protoc --go_out=. --go_opt=paths=source_relative \
     --go-grpc_out=. --go-grpc_opt=paths=source_relative \
     pkg/pb/governance.proto
 
 mod_update_proto:
-	go get google.golang.org/genproto@latest
-	go mod tidy
+	@echo "Updating proto-related Go modules..."
+	@go get google.golang.org/genproto@latest
+	@go mod tidy
 
 docker_build:
-	docker build -f Dockerfile.governance -t resolyte/service-governance:$(TAG) .
+	@echo "Building Docker image: resolyte/service-governance:$(TAG)"
+	@docker build -f Dockerfile.governance -t resolyte/service-governance:$(TAG) .
 
 docker_push:
-	docker push resolyte/service-governance:$(TAG)
+	@echo "Pushing Docker image: resolyte/service-governance:$(TAG)"
+	@docker push resolyte/service-governance:$(TAG)
 
 docker_release: docker_build docker_push
+	@echo "released $(TAG)"
 
 k8s_manifest:
 	@echo "Generating combined manifest..."
