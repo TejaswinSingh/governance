@@ -15,6 +15,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
+	"github.com/Resolyte-official/service-governance/pkg/metrics"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
@@ -68,10 +69,11 @@ func main() {
 			Mongo:  mongoService,
 			Casbin: casbinService,
 		}
+		metrics     = metrics.NewGovernanceMetrics()
 		service     = governance.NewService(&envConfig, store)
 		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, lw)
-		grpcServer  = transport.NewGRPCServer(eps, &envConfig, lw)
+		httpHandler = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, metrics, lw)
+		grpcServer  = transport.NewGRPCServer(eps, &envConfig, metrics, lw)
 	)
 
 	var g group.Group

@@ -13,8 +13,10 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	governanceErrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
+	"github.com/Resolyte-official/service-governance/pkg/metrics"
 	httptransport "github.com/go-kit/kit/transport/http"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type ContextKey string
@@ -26,8 +28,10 @@ const (
 	RefreshTokenKey  ContextKey = "refresh-token"
 )
 
-func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, svcStore *governance.ServiceStore, lw logging.LogWriter) http.Handler {
+func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, svcStore *governance.ServiceStore, metrics *metrics.Metrics, lw logging.LogWriter) http.Handler {
 	m := http.NewServeMux()
+
+	m.Handle("/metrics", promhttp.Handler())
 
 	m.Handle("GET /governance/healthz", httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
@@ -61,7 +65,7 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 
 	handler := AuthMiddleware(envConfig, svcStore)(m)
 	handler = CORS(corsConfig)(handler)
-	handler = TracingAndLoggingMiddleware(logger, envConfig)(handler)
+	handler = TracingLoggingMetricsMiddleware(logger, envConfig, metrics)(handler)
 
 	return handler
 }

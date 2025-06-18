@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
+	"github.com/Resolyte-official/service-governance/pkg/metrics"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"github.com/google/uuid"
 	"google.golang.org/grpc/metadata"
@@ -22,7 +24,7 @@ func (f grpcHandlerFunc) ServeGRPC(ctx context.Context, req any) (context.Contex
 	return f(ctx, req)
 }
 
-func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logger, rpc string, next grpctransport.Handler) grpctransport.Handler {
+func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logger, metrics *metrics.Metrics, rpc string, next grpctransport.Handler) grpctransport.Handler {
 	return grpcHandlerFunc(func(ctx context.Context, req any) (context.Context, any, error) {
 		start := time.Now()
 
@@ -31,6 +33,16 @@ func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logge
 		defer func() {
 			logE.Duration = time.Since(start).String()
 			logE.Log(logger)
+
+			// metrics
+			labels := []string{
+				"transport", logE.Transport,
+				"path", "",
+				"rpc", logE.RPC,
+				"status", strconv.Itoa(logE.Status),
+			}
+			metrics.RequestLatency.With(labels...).Observe(time.Since(start).Seconds())
+			metrics.RequestCount.With(labels...).Add(1)
 		}()
 
 		// log userID if request has a token

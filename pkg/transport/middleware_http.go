@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
+	"github.com/Resolyte-official/service-governance/pkg/metrics"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/google/uuid"
 
@@ -60,7 +62,7 @@ func CORS(corsConfig *CorsOptions) func(http.Handler) http.Handler {
 	}
 }
 
-func TracingAndLoggingMiddleware(logger logging.Logger, envConfig *config.Configuration) func(http.Handler) http.Handler {
+func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Configuration, metrics *metrics.Metrics) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now().UTC()
@@ -77,10 +79,20 @@ func TracingAndLoggingMiddleware(logger logging.Logger, envConfig *config.Config
 				logE.Error = rw.Err
 				logE.Duration = time.Since(start).String()
 				logE.Log(logger)
+
+				// metrics
+				labels := []string{
+					"transport", logE.Transport,
+					"path", logE.Path,
+					"rpc", "",
+					"status", strconv.Itoa(logE.Status),
+				}
+				metrics.RequestLatency.With(labels...).Observe(time.Since(start).Seconds())
+				metrics.RequestCount.With(labels...).Add(1)
 			}()
 
-			// don't trace preflight request
-			if r.Method != http.MethodOptions {
+			// don't trace preflight request and request to metrics endpoint
+			if r.Method != http.MethodOptions && r.URL.Path != "/metrics" {
 
 				// requestID is required
 				reqID := r.Header.Get("X-Request-ID")
@@ -133,7 +145,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 
 			// authentication
 			switch r.URL.Path {
-			case "/auth/login": // unprotected paths
+			case "/auth/login", "/metrics": // unprotected paths
 				next.ServeHTTP(w, r)
 				return
 

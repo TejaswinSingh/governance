@@ -7,6 +7,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
+	"github.com/Resolyte-official/service-governance/pkg/metrics"
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
@@ -20,20 +21,20 @@ type grpcServer struct {
 	authorize     grpctransport.Handler
 }
 
-func NewGRPCServer(ep endpoints.Set, envConfig *config.Configuration, lw logging.LogWriter) pb.GovernanceServer {
+func NewGRPCServer(ep endpoints.Set, envConfig *config.Configuration, metrics *metrics.Metrics, lw logging.LogWriter) pb.GovernanceServer {
 	logger := logging.NewContextLogger(lw, "GrpcServer")
 	return &grpcServer{
-		serviceStatus: grpcLoggingMiddleware(envConfig, logger, "ServiceStatus", grpctransport.NewServer(
+		serviceStatus: grpcLoggingMiddleware(envConfig, logger, metrics, "ServiceStatus", grpctransport.NewServer(
 			ep.ServiceStatusEndpoint,
 			decodeGRPCServiceStatusRequest,
 			encodeGRPCServiceStatusResponse,
 		)),
-		authenticate: grpcLoggingMiddleware(envConfig, logger, "Authenticate", grpctransport.NewServer(
+		authenticate: grpcLoggingMiddleware(envConfig, logger, metrics, "Authenticate", grpctransport.NewServer(
 			ep.AuthenticateEndpoint,
 			decodeGRPCAuthenticateRequest,
 			encodeGRPCAuthenticateResponse,
 		)),
-		authorize: grpcLoggingMiddleware(envConfig, logger, "Authorize", grpctransport.NewServer(
+		authorize: grpcLoggingMiddleware(envConfig, logger, metrics, "Authorize", grpctransport.NewServer(
 			ep.AuthorizeEndpoint,
 			decodeGRPCAuthorizeRequest,
 			encodeGRPCAuthorizeResponse,
