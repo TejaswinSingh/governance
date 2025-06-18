@@ -24,17 +24,17 @@ type grpcServer struct {
 func NewGRPCServer(ep endpoints.Set, envConfig *config.Configuration, metrics *metrics.Metrics, lw logging.LogWriter) pb.GovernanceServer {
 	logger := logging.NewContextLogger(lw, "GrpcServer")
 	return &grpcServer{
-		serviceStatus: grpcLoggingMiddleware(envConfig, logger, metrics, "ServiceStatus", grpctransport.NewServer(
+		serviceStatus: grpcTracingLoggingMetricsMiddleware(envConfig, logger, metrics, "ServiceStatus", grpctransport.NewServer(
 			ep.ServiceStatusEndpoint,
 			decodeGRPCServiceStatusRequest,
 			encodeGRPCServiceStatusResponse,
 		)),
-		authenticate: grpcLoggingMiddleware(envConfig, logger, metrics, "Authenticate", grpctransport.NewServer(
+		authenticate: grpcTracingLoggingMetricsMiddleware(envConfig, logger, metrics, "Authenticate", grpctransport.NewServer(
 			ep.AuthenticateEndpoint,
 			decodeGRPCAuthenticateRequest,
 			encodeGRPCAuthenticateResponse,
 		)),
-		authorize: grpcLoggingMiddleware(envConfig, logger, metrics, "Authorize", grpctransport.NewServer(
+		authorize: grpcTracingLoggingMetricsMiddleware(envConfig, logger, metrics, "Authorize", grpctransport.NewServer(
 			ep.AuthorizeEndpoint,
 			decodeGRPCAuthorizeRequest,
 			encodeGRPCAuthorizeResponse,

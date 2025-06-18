@@ -24,7 +24,7 @@ func (f grpcHandlerFunc) ServeGRPC(ctx context.Context, req any) (context.Contex
 	return f(ctx, req)
 }
 
-func grpcLoggingMiddleware(envConfig *config.Configuration, logger logging.Logger, metrics *metrics.Metrics, rpc string, next grpctransport.Handler) grpctransport.Handler {
+func grpcTracingLoggingMetricsMiddleware(envConfig *config.Configuration, logger logging.Logger, metrics *metrics.Metrics, rpc string, next grpctransport.Handler) grpctransport.Handler {
 	return grpcHandlerFunc(func(ctx context.Context, req any) (context.Context, any, error) {
 		start := time.Now()
 
