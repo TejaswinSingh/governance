@@ -12,14 +12,18 @@ import (
 
 // Configuration .
 type Configuration struct {
-	Env         GoEnv
-	HttpMode    HttpMode
-	HttpPort    string
-	GrpcPort    string
-	SecretKey   []byte
-	CorsOrigins []string
-	Redis       persist.RedisConfiguration
-	Mongo       persist.MongoConfiguration
+	Env                    GoEnv
+	HttpMode               HttpMode
+	HttpPort               string
+	GrpcPort               string
+	SecretKey              []byte
+	CorsOrigins            []string
+	TwilioApiKey           string
+	TwilioAccountSid       string
+	TwilioApiSecret        string
+	TwilioVerifyServiceSid string
+	Redis                  persist.RedisConfiguration
+	Mongo                  persist.MongoConfiguration
 }
 
 const (
@@ -52,12 +56,16 @@ func NewEnvironmentConfiguration() Configuration {
 	}
 
 	return Configuration{
-		Env:         ValidateEnv(GoEnv(os.Getenv("ENV"))),
-		HttpMode:    ValidateHttpMode(httpMode),
-		HttpPort:    envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
-		GrpcPort:    envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
-		SecretKey:   secretKey,
-		CorsOrigins: parseStringsEnv("CORS_ORIGINS", []string{defaultCORSOrigin}),
+		Env:                    ValidateEnv(GoEnv(os.Getenv("ENV"))),
+		HttpMode:               ValidateHttpMode(httpMode),
+		HttpPort:               envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
+		GrpcPort:               envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
+		SecretKey:              secretKey,
+		CorsOrigins:            parseStringsEnv("CORS_ORIGINS", []string{defaultCORSOrigin}),
+		TwilioApiKey:           requireEnv("TWILIO_API_KEY"),
+		TwilioAccountSid:       requireEnv("TWILIO_ACCOUNT_SID"),
+		TwilioApiSecret:        requireEnv("TWILIO_API_SECRET"),
+		TwilioVerifyServiceSid: requireEnv("TWILIO_VERIFY_SERVICE_SID"),
 		Redis: persist.RedisConfiguration{
 			Host:     envString("REDIS_HOST", defaultRedisHost),
 			Port:     envString("REDIS_PORT", defaultRedisPort),

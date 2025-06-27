@@ -8,19 +8,22 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
+	"github.com/Resolyte-official/service-governance/pkg/twilio"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type governanceService struct {
-	envConfig *config.Configuration
-	svcStore  *ServiceStore
+	envConfig    *config.Configuration
+	svcStore     *ServiceStore
+	twilioClient twilio.TwilioClient
 }
 
-func NewService(envConfig *config.Configuration, svcStore *ServiceStore) Service {
+func NewService(envConfig *config.Configuration, svcStore *ServiceStore, twC twilio.TwilioClient) Service {
 	return &governanceService{
-		envConfig: envConfig,
-		svcStore:  svcStore,
+		envConfig:    envConfig,
+		svcStore:     svcStore,
+		twilioClient: twC,
 	}
 }
 

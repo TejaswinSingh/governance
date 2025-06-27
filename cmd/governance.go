@@ -19,6 +19,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
+	"github.com/Resolyte-official/service-governance/pkg/twilio"
 	"google.golang.org/grpc"
 
 	"github.com/oklog/oklog/pkg/group"
@@ -69,11 +70,12 @@ func main() {
 			Mongo:  mongoService,
 			Casbin: casbinService,
 		}
-		metrics     = metrics.NewGovernanceMetrics()
-		service     = governance.NewService(&envConfig, store)
-		eps         = endpoints.NewEndpointSet(service)
-		httpHandler = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, metrics, lw)
-		grpcServer  = transport.NewGRPCServer(eps, &envConfig, metrics, lw)
+		metrics      = metrics.NewGovernanceMetrics()
+		twilioClient = twilio.NewTwilioClient(&envConfig)
+		service      = governance.NewService(&envConfig, store, twilioClient)
+		eps          = endpoints.NewEndpointSet(service)
+		httpHandler  = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, metrics, lw)
+		grpcServer   = transport.NewGRPCServer(eps, &envConfig, metrics, lw)
 	)
 
 	var g group.Group
