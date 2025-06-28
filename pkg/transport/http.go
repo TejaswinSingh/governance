@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
@@ -38,6 +39,13 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 		decodeHTTPServiceStatusRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError), // called automatically if error occurs in either of the following: decoder, endpoint, encoder
+	))
+
+	m.Handle("POST /auth/request-otp", httptransport.NewServer(
+		ep.SendOTPEndpoint,
+		decodeHTTPSendOTPRequest,
+		makeEncodeResponse(envConfig),
+		httptransport.ServerErrorEncoder(encodeError),
 	))
 
 	m.Handle("POST /auth/login", httptransport.NewServer(
@@ -74,12 +82,34 @@ func decodeHTTPServiceStatusRequest(_ context.Context, _ *http.Request) (any, er
 	return endpoints.ServiceStatusRequest{}, nil
 }
 
+func decodeHTTPSendOTPRequest(_ context.Context, r *http.Request) (any, error) {
+	var req endpoints.SendOTPRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&req)
+	if err != nil {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.CountryCode = strings.TrimSpace(req.CountryCode)
+	req.Phone = strings.TrimSpace(req.Phone)
+	if req.CountryCode == "" || req.Phone == "" {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	return req, nil
+}
+
 func decodeHTTPLoginRequest(_ context.Context, r *http.Request) (any, error) {
 	var req endpoints.LoginRequest
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(&req)
 	if err != nil {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.CountryCode = strings.TrimSpace(req.CountryCode)
+	req.Phone = strings.TrimSpace(req.Phone)
+	req.OTP = strings.TrimSpace(req.OTP)
+	if req.CountryCode == "" || req.Phone == "" || req.OTP == "" {
 		return nil, governanceErrors.ErrBadRequest
 	}
 	return req, nil

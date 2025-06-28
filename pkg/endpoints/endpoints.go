@@ -12,6 +12,7 @@ import (
 type Set struct {
 	// http endpoints
 	ServiceStatusEndpoint endpoint.Endpoint
+	SendOTPEndpoint       endpoint.Endpoint
 	LoginEndpoint         endpoint.Endpoint
 	LogoutEndpoint        endpoint.Endpoint
 	RefreshEndpoint       endpoint.Endpoint
@@ -23,6 +24,7 @@ type Set struct {
 func NewEndpointSet(svc governance.Service) Set {
 	return Set{
 		ServiceStatusEndpoint: MakeServiceStatusEndpoint(svc),
+		SendOTPEndpoint:       MakeSendOTPEndpoint(svc),
 		LoginEndpoint:         MakeLoginEndpoint(svc),
 		LogoutEndpoint:        MakeLogoutEndpoint(svc),
 		RefreshEndpoint:       MakeRefreshEndpoint(svc),
@@ -42,10 +44,21 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 	}
 }
 
+func MakeSendOTPEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(SendOTPRequest)
+		status, err := svc.SendOTP(ctx, req.CountryCode, req.Phone)
+		if err != nil {
+			return nil, err
+		}
+		return SendOTPResponse{Status: status}, nil
+	}
+}
+
 func MakeLoginEndpoint(svc governance.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request any) (any, error) {
 		req := request.(LoginRequest)
-		tokenAccess, tokenRefresh, mdata, status, err := svc.Login(ctx, req.Username, req.Password)
+		tokenAccess, tokenRefresh, mdata, status, err := svc.Login(ctx, req.CountryCode, req.Phone, req.OTP)
 		if err != nil {
 			return nil, err
 		}

@@ -145,7 +145,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 
 			// authentication
 			switch r.URL.Path {
-			case "/auth/login", "/metrics": // unprotected paths
+			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics": // unprotected paths
 				next.ServeHTTP(w, r)
 				return
 

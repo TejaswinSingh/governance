@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Resolyte-official/service-governance/pkg/persist"
+	"github.com/google/uuid"
 )
 
 // Configuration .
@@ -16,11 +17,11 @@ type Configuration struct {
 	HttpMode               HttpMode
 	HttpPort               string
 	GrpcPort               string
+	NamespaceUUID          uuid.UUID
 	SecretKey              []byte
 	CorsOrigins            []string
-	TwilioApiKey           string
 	TwilioAccountSid       string
-	TwilioApiSecret        string
+	TwilioAuthToken        string
 	TwilioVerifyServiceSid string
 	Redis                  persist.RedisConfiguration
 	Mongo                  persist.MongoConfiguration
@@ -50,6 +51,11 @@ func NewEnvironmentConfiguration() Configuration {
 		panic(fmt.Errorf("SECRET_KEY must be at least 32 bytes, got %d", len(secretKey)))
 	}
 
+	namespaceUUID, err := uuid.Parse(requireEnv("NAMESPACE_UUID"))
+	if err != nil {
+		panic(errors.New("NAMESPACE_UUID must be a valid UUID"))
+	}
+
 	redisDB := envInt("REDIS_DATABASE_GOVERNANCE", defaultRedisDatabase)
 	if redisDB < 0 || redisDB > 15 {
 		panic(errors.New("REDIS_DATABASE_GOVERNANCE must be an integer between 0 and 15, included"))
@@ -60,11 +66,11 @@ func NewEnvironmentConfiguration() Configuration {
 		HttpMode:               ValidateHttpMode(httpMode),
 		HttpPort:               envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
 		GrpcPort:               envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
+		NamespaceUUID:          namespaceUUID,
 		SecretKey:              secretKey,
 		CorsOrigins:            parseStringsEnv("CORS_ORIGINS", []string{defaultCORSOrigin}),
-		TwilioApiKey:           requireEnv("TWILIO_API_KEY"),
 		TwilioAccountSid:       requireEnv("TWILIO_ACCOUNT_SID"),
-		TwilioApiSecret:        requireEnv("TWILIO_API_SECRET"),
+		TwilioAuthToken:        requireEnv("TWILIO_AUTH_TOKEN"),
 		TwilioVerifyServiceSid: requireEnv("TWILIO_VERIFY_SERVICE_SID"),
 		Redis: persist.RedisConfiguration{
 			Host:     envString("REDIS_HOST", defaultRedisHost),

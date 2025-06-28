@@ -12,9 +12,20 @@ type ServiceStatusResponse struct {
 
 func (r ServiceStatusResponse) GetStatus() int { return r.Status }
 
+type SendOTPRequest struct {
+	CountryCode string `json:"country_code"`
+	Phone       string `json:"phone"`
+}
+type SendOTPResponse struct {
+	Status int `json:"status"`
+}
+
+func (r SendOTPResponse) GetStatus() int { return r.Status }
+
 type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	CountryCode string `json:"country_code"`
+	Phone       string `json:"phone"`
+	OTP         string `json:"otp"`
 }
 type LoginResponse struct {
 	TokenAccess  string  `json:"-"`

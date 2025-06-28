@@ -1,11 +1,10 @@
 package twilio
 
 import (
-	"errors"
-
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	svcError "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/twilio/twilio-go"
+	lookups "github.com/twilio/twilio-go/rest/lookups/v1"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
 )
 
@@ -21,16 +20,24 @@ type twilioClient struct {
 
 func NewTwilioClient(envConfig *config.Configuration) TwilioClient {
 	client := twilio.NewRestClientWithParams(twilio.ClientParams{
-		Username:   envConfig.TwilioApiKey,
-		Password:   envConfig.TwilioApiSecret,
-		AccountSid: envConfig.TwilioAccountSid,
+		Username: envConfig.TwilioAccountSid,
+		Password: envConfig.TwilioAuthToken,
 	})
-	client.SetRegion("gll")
-	client.SetEdge("roaming")
 	return &twilioClient{
 		client:           client,
 		verifyServiceSid: envConfig.TwilioVerifyServiceSid,
 	}
+}
+
+func (tc *twilioClient) IsPhoneValid(phone string) bool {
+	params := &lookups.FetchPhoneNumberParams{}
+	// params.SetType([]string{"carrier"}) // Optional, gets carrier/type info
+
+	if _, err := tc.client.LookupsV1.FetchPhoneNumber(phone, params); err != nil {
+		return false
+	}
+
+	return true
 }
 
 func (tc *twilioClient) SendOTP(phone string) error {
@@ -40,7 +47,7 @@ func (tc *twilioClient) SendOTP(phone string) error {
 
 	_, err := tc.client.VerifyV2.CreateVerification(tc.verifyServiceSid, params)
 	if err != nil {
-		return err
+		return svcError.ErrServiceUnavailable.WithInternalErr(err)
 	}
 	return nil
 }
@@ -52,10 +59,10 @@ func (tc *twilioClient) VerifyOTP(phone, otp string) error {
 
 	resp, err := tc.client.VerifyV2.CreateVerificationCheck(tc.verifyServiceSid, params)
 	if err != nil {
-		return err
+		return svcError.ErrServiceUnavailable.WithInternalErr(err)
 	}
-	if resp.Status != nil && *(resp.Status) != "approved" {
-		return svcError.ErrUnauthorized.WithInternalErr(errors.New("verification failed"))
+	if resp != nil && resp.Status != nil && *(resp.Status) == "approved" {
+		return nil
 	}
-	return nil
+	return svcError.ErrInvalidOTP
 }

@@ -18,12 +18,8 @@ type ServiceStore struct {
 	Casbin *auth.CasbinService
 }
 
-func uuidStrToBinary(u string) (bson.Binary, error) {
-	parsed, err := uuid.Parse(u)
-	if err != nil {
-		return bson.Binary{}, err
-	}
-	return bson.Binary{Subtype: 0x04, Data: parsed[:]}, nil
+func uuidToBinary(id uuid.UUID) bson.Binary {
+	return bson.Binary{Subtype: 0x04, Data: id[:]}
 }
 
 func uuidBinToString(id any) (string, bool) {
@@ -46,6 +42,22 @@ func bsonDToMap(d bson.D) map[string]any {
 	return m
 }
 
+func UUIDv5FromPhone(phone string, namespace uuid.UUID) uuid.UUID {
+	return uuid.NewSHA1(namespace, []byte(phone))
+}
+
+func (s *governanceService) getUser(ctx context.Context, userID uuid.UUID) (bson.M, error) {
+	db := "metadata"
+	coll := s.svcStore.Mongo.GetCollection(db, "users")
+
+	// get user
+	userDoc, err := s.getDoc(ctx, coll, bson.M{"_id": uuidToBinary(userID)})
+	if err != nil {
+		return nil, err
+	}
+	return userDoc, nil
+}
+
 func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, filter any) (bson.M, error) {
 	res, err := s.svcStore.Mongo.FindOne(ctx, coll, filter)
 	if err != nil {
@@ -61,22 +73,23 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 	return doc, nil
 }
 
-func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*bson.M, error) {
+func (s *governanceService) fetchMetaData(ctx context.Context, userID uuid.UUID) (bson.M, error) {
 	db := "metadata"
 	collUsers := s.svcStore.Mongo.GetCollection(db, "users")
 	collStudents := s.svcStore.Mongo.GetCollection(db, "students")
 	collVehicles := s.svcStore.Mongo.GetCollection(db, "vehicles")
 	collRoutes := s.svcStore.Mongo.GetCollection(db, "routes")
 
-	userUUID, err := uuidStrToBinary(userID)
-	if err != nil {
-		return nil, myerrors.ErrMetaData.WithInternalErr(err)
-	}
-
 	// Fetch user
-	userDoc, err := s.getDoc(ctx, collUsers, bson.M{"_id": userUUID})
+	userDoc, err := s.getDoc(ctx, collUsers, bson.M{"_id": uuidToBinary(userID)})
 	if err != nil {
 		return nil, err
+	}
+
+	// check role exists
+	role, ok := userDoc["role"].(string)
+	if !ok || role == "" {
+		return nil, myerrors.ErrMissingMetaData
 	}
 
 	// Fetch all students linked with the user
@@ -162,5 +175,5 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID string) (*
 	}
 
 	userDoc["linked_ids"] = students
-	return &userDoc, nil
+	return userDoc, nil
 }

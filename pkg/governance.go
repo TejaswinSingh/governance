@@ -10,6 +10,7 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/twilio"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -31,33 +32,39 @@ func (s *governanceService) ServiceStatus(_ context.Context) (int, error) {
 	return http.StatusOK, nil
 }
 
-func (s *governanceService) Login(ctx context.Context, username, password string) (string, string, *bson.M, int, error) {
+func (s *governanceService) SendOTP(ctx context.Context, countryCode, phone string) (int, error) {
+	phone = countryCode + phone
+
+	// make uuid from phone
+	id := UUIDv5FromPhone(phone, s.envConfig.NamespaceUUID)
+
+	// check user exists
+	if _, err := s.getUser(ctx, id); err != nil {
+		return 0, err
+	}
+
+	// send otp
+	if err := s.twilioClient.SendOTP(phone); err != nil {
+		return 0, err
+	}
+
+	return http.StatusOK, nil
+}
+
+func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp string) (string, string, *bson.M, int, error) {
 	fail := func(err error) (string, string, *bson.M, int, error) {
 		return "", "", nil, 0, err
 	}
 
-	if username == "" || password == "" {
-		return fail(errors.ErrMissingCreds)
-	}
-	// TODO: implement proper credentials check
-	if password != "password" {
-		return fail(errors.ErrInvalidCreds)
-	}
+	phone = countryCode + phone
 
-	// TODO: get user id and role from db
-	id := "0334ded6-047f-4c90-9e7f-05d84c94b530"
-	role := username
-
-	// create tokens
-	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.AccessToken, now)
-	if err != nil {
+	// otp-verification
+	if err := s.twilioClient.VerifyOTP(phone, otp); err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.RefreshToken, now)
-	if err != nil {
-		return fail(err)
-	}
+
+	// make uuid from phone
+	id := UUIDv5FromPhone(phone, s.envConfig.NamespaceUUID)
 
 	// fetch metadata
 	mdata, err := s.fetchMetaData(ctx, id)
@@ -65,7 +72,20 @@ func (s *governanceService) Login(ctx context.Context, username, password string
 		return fail(err)
 	}
 
-	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
+	role := mdata["role"].(string)
+
+	// create tokens
+	now := time.Now()
+	tokenAccess, err := auth.CreateToken(id.String(), role, s.envConfig.SecretKey, auth.AccessToken, now)
+	if err != nil {
+		return fail(err)
+	}
+	tokenRefresh, err := auth.CreateToken(id.String(), role, s.envConfig.SecretKey, auth.RefreshToken, now)
+	if err != nil {
+		return fail(err)
+	}
+
+	return tokenAccess, tokenRefresh, &mdata, http.StatusOK, nil
 }
 
 func (s *governanceService) Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error) {
@@ -97,26 +117,32 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 
 	// TODO: blacklist all access tokens issued with this refresh token
 
-	// create new tokens
 	id, _ := claimsRefresh["sub"].(string)
 	role, _ := claimsRefresh["role"].(string)
+
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return fail(errors.ErrInvalidClaims)
+	}
+
+	// create new tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.AccessToken, now)
+	tokenAccess, err := auth.CreateToken(userID.String(), role, s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id, role, s.envConfig.SecretKey, auth.RefreshToken, now)
+	tokenRefresh, err := auth.CreateToken(userID.String(), role, s.envConfig.SecretKey, auth.RefreshToken, now)
 	if err != nil {
 		return fail(err)
 	}
 
 	// fetch metadata
-	mdata, err := s.fetchMetaData(ctx, id)
+	mdata, err := s.fetchMetaData(ctx, userID)
 	if err != nil {
 		return fail(err)
 	}
 
-	return tokenAccess, tokenRefresh, mdata, http.StatusOK, nil
+	return tokenAccess, tokenRefresh, &mdata, http.StatusOK, nil
 }
 
 func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt.MapClaims, int, error) {
