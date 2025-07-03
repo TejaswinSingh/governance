@@ -3,6 +3,7 @@ package governance
 import (
 	"context"
 	"net/http"
+	"net/mail"
 	"time"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
@@ -30,6 +31,36 @@ func NewService(envConfig *config.Configuration, svcStore *ServiceStore, twC twi
 
 func (s *governanceService) ServiceStatus(_ context.Context) (int, error) {
 	return http.StatusOK, nil
+}
+
+func (s *governanceService) GetSchoolAdminToken(ctx context.Context, email string) (token string, status int, err error) {
+
+	// validate email
+	if _, err := mail.ParseAddress(email); err != nil {
+		return "", 0, errors.ErrBadRequest
+	}
+
+	// make uuid from email
+	id := UUIDv5FromPhone(email, s.envConfig.NamespaceUUID)
+
+	// check user exists
+	userDoc, err := s.getUser(ctx, id)
+	if err != nil {
+		return "", 0, err
+	}
+
+	role := userDoc["role"].(string)
+	token, err = auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, time.Now())
+	if err != nil {
+		return "", 0, err
+	}
+	// encrypt token
+	token, err = auth.EncryptJWT(token, s.envConfig.SecretKey)
+	if err != nil {
+		return "", 0, err
+	}
+
+	return token, http.StatusOK, nil
 }
 
 func (s *governanceService) SendOTP(ctx context.Context, countryCode, phone string) (int, error) {
@@ -76,11 +107,11 @@ func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp s
 
 	// create tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id.String(), role, s.envConfig.SecretKey, auth.AccessToken, now)
+	tokenAccess, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id.String(), role, s.envConfig.SecretKey, auth.RefreshToken, now)
+	tokenRefresh, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now)
 	if err != nil {
 		return fail(err)
 	}
@@ -127,11 +158,11 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 
 	// create new tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(userID.String(), role, s.envConfig.SecretKey, auth.AccessToken, now)
+	tokenAccess, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(userID.String(), role, s.envConfig.SecretKey, auth.RefreshToken, now)
+	tokenRefresh, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now)
 	if err != nil {
 		return fail(err)
 	}

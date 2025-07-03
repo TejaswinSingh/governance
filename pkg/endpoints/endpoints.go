@@ -11,11 +11,12 @@ import (
 
 type Set struct {
 	// http endpoints
-	ServiceStatusEndpoint endpoint.Endpoint
-	SendOTPEndpoint       endpoint.Endpoint
-	LoginEndpoint         endpoint.Endpoint
-	LogoutEndpoint        endpoint.Endpoint
-	RefreshEndpoint       endpoint.Endpoint
+	ServiceStatusEndpoint       endpoint.Endpoint
+	GetSchoolAdminTokenEndpoint endpoint.Endpoint
+	SendOTPEndpoint             endpoint.Endpoint
+	LoginEndpoint               endpoint.Endpoint
+	LogoutEndpoint              endpoint.Endpoint
+	RefreshEndpoint             endpoint.Endpoint
 	// grpc endpoints
 	AuthenticateEndpoint endpoint.Endpoint
 	AuthorizeEndpoint    endpoint.Endpoint
@@ -23,13 +24,14 @@ type Set struct {
 
 func NewEndpointSet(svc governance.Service) Set {
 	return Set{
-		ServiceStatusEndpoint: MakeServiceStatusEndpoint(svc),
-		SendOTPEndpoint:       MakeSendOTPEndpoint(svc),
-		LoginEndpoint:         MakeLoginEndpoint(svc),
-		LogoutEndpoint:        MakeLogoutEndpoint(svc),
-		RefreshEndpoint:       MakeRefreshEndpoint(svc),
-		AuthenticateEndpoint:  MakeAuthenticateEndpoint(svc),
-		AuthorizeEndpoint:     MakeAuthorizeEndpoint(svc),
+		ServiceStatusEndpoint:       MakeServiceStatusEndpoint(svc),
+		GetSchoolAdminTokenEndpoint: MakeGetSchoolAdminTokenEndpoint(svc),
+		SendOTPEndpoint:             MakeSendOTPEndpoint(svc),
+		LoginEndpoint:               MakeLoginEndpoint(svc),
+		LogoutEndpoint:              MakeLogoutEndpoint(svc),
+		RefreshEndpoint:             MakeRefreshEndpoint(svc),
+		AuthenticateEndpoint:        MakeAuthenticateEndpoint(svc),
+		AuthorizeEndpoint:           MakeAuthorizeEndpoint(svc),
 	}
 }
 
@@ -41,6 +43,20 @@ func MakeServiceStatusEndpoint(svc governance.Service) endpoint.Endpoint {
 			return nil, err
 		}
 		return ServiceStatusResponse{Status: status}, nil
+	}
+}
+
+func MakeGetSchoolAdminTokenEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(GetSchoolAdminTokenRequest)
+		token, status, err := svc.GetSchoolAdminToken(ctx, req.Email)
+		if err != nil {
+			return nil, err
+		}
+		return GetSchoolAdminTokenResponse{
+			Token:  token,
+			Status: status,
+		}, nil
 	}
 }
 

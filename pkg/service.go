@@ -9,6 +9,7 @@ import (
 
 type Service interface {
 	ServiceStatus(ctx context.Context) (int, error)
+	GetSchoolAdminToken(ctx context.Context, email string) (token string, status int, err error)
 	SendOTP(ctx context.Context, countryCode, phone string) (int, error)
 	Login(ctx context.Context, countryCode, phone, otp string) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
 	Logout(ctx context.Context, tokenAccess, tokenRefresh string, claimsAccess, claimsRefresh jwt.MapClaims) (int, error)

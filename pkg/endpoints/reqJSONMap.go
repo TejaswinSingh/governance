@@ -12,6 +12,17 @@ type ServiceStatusResponse struct {
 
 func (r ServiceStatusResponse) GetStatus() int { return r.Status }
 
+type GetSchoolAdminTokenRequest struct {
+	Email string `json:"email"`
+}
+
+type GetSchoolAdminTokenResponse struct {
+	Token  string `json:"token"`
+	Status int    `json:"status"`
+}
+
+func (r GetSchoolAdminTokenResponse) GetStatus() int { return r.Status }
+
 type SendOTPRequest struct {
 	CountryCode string `json:"country_code"`
 	Phone       string `json:"phone"`

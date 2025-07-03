@@ -41,6 +41,13 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 		httptransport.ServerErrorEncoder(encodeError), // called automatically if error occurs in either of the following: decoder, endpoint, encoder
 	))
 
+	m.Handle("POST /auth/token/school-admin", httptransport.NewServer(
+		ep.GetSchoolAdminTokenEndpoint,
+		decodeGetSchoolAdminTokenRequest,
+		makeEncodeResponse(envConfig),
+		httptransport.ServerErrorEncoder(encodeError),
+	))
+
 	m.Handle("POST /auth/request-otp", httptransport.NewServer(
 		ep.SendOTPEndpoint,
 		decodeHTTPSendOTPRequest,
@@ -80,6 +87,21 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 
 func decodeHTTPServiceStatusRequest(_ context.Context, _ *http.Request) (any, error) {
 	return endpoints.ServiceStatusRequest{}, nil
+}
+
+func decodeGetSchoolAdminTokenRequest(ctx context.Context, r *http.Request) (any, error) {
+	var req endpoints.GetSchoolAdminTokenRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&req)
+	if err != nil {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.Email = strings.TrimSpace(req.Email)
+	if req.Email == "" {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	return req, nil
 }
 
 func decodeHTTPSendOTPRequest(_ context.Context, r *http.Request) (any, error) {

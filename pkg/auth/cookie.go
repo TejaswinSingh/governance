@@ -8,6 +8,20 @@ import (
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 )
 
+func EncryptJWT(token string, secretKey []byte) (string, error) {
+
+	// encrypt token
+	sealed, err := cryptoutil.Encrypt([]byte(token), secretKey)
+	if err != nil {
+		return "", errors.ErrInternalServer.WithInternalErr(err)
+	}
+
+	// for preserving special characters
+	// that might be generated during encryption
+	return base64.URLEncoding.EncodeToString(sealed), nil
+
+}
+
 // returns silently if anything goes wrong, following http.SetCookie behaviour
 func WriteEncryptedCookie(w http.ResponseWriter, cookie *http.Cookie, secretKey []byte) {
 	// encrypt cookie

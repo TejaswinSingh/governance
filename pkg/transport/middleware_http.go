@@ -92,6 +92,7 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 			}()
 
 			// don't trace preflight request and request to metrics endpoint
+			// TODO: this check can be removed in prod
 			if r.Method != http.MethodOptions && r.URL.Path != "/metrics" {
 
 				// requestID is required
@@ -116,7 +117,7 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 							}
 						}
 					}
-				case "/auth/login":
+				case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics", "/auth/token/school-admin":
 					// no token in header
 				default:
 					if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
@@ -145,7 +146,9 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 
 			// authentication
 			switch r.URL.Path {
-			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics": // unprotected paths
+
+			// unprotected paths
+			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/auth/token/school-admin", "/metrics":
 				next.ServeHTTP(w, r)
 				return
 

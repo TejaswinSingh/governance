@@ -14,19 +14,27 @@ import (
 )
 
 type AuthToken string
+type Role string
 
 const (
-	Domain             string    = "abcdery.com"
-	AccessToken        AuthToken = "access_token"
-	RefreshToken       AuthToken = "refresh_token"
-	AccessTokenExpiry            = time.Minute * 15    // 15 minutes
-	RefreshTokenExpiry           = time.Hour * 24 * 15 // 15 days
+	Domain                       string    = "abcdery.com"
+	AccessToken                  AuthToken = "access_token"
+	RefreshToken                 AuthToken = "refresh_token"
+	RoleParent                   Role      = "parent"
+	RoleSchoolAdmin              Role      = "school-admin"
+	AccessTokenExpiry                      = time.Minute * 15     // 15 minutes
+	SchoolAdminAccessTokenExpiry           = time.Hour * 24 * 365 // 1 year
+	RefreshTokenExpiry                     = time.Hour * 24 * 15  // 15 days
 )
 
-func CreateToken(id, role string, secretKey []byte, token AuthToken, now time.Time) (string, error) {
+func CreateToken(id string, role Role, secretKey []byte, token AuthToken, now time.Time) (string, error) {
 	var exp time.Duration
 	if token == AccessToken {
-		exp = AccessTokenExpiry
+		if role == RoleSchoolAdmin {
+			exp = SchoolAdminAccessTokenExpiry
+		} else {
+			exp = AccessTokenExpiry
+		}
 	} else { // refresh
 		exp = RefreshTokenExpiry
 	}
