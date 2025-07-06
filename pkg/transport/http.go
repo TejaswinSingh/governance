@@ -41,9 +41,16 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 		httptransport.ServerErrorEncoder(encodeError), // called automatically if error occurs in either of the following: decoder, endpoint, encoder
 	))
 
-	m.Handle("POST /auth/token/school-admin", httptransport.NewServer(
+	m.Handle("POST /auth/school-admin/token", httptransport.NewServer(
 		ep.GetSchoolAdminTokenEndpoint,
 		decodeGetSchoolAdminTokenRequest,
+		makeEncodeResponse(envConfig),
+		httptransport.ServerErrorEncoder(encodeError),
+	))
+
+	m.Handle("POST /auth/school-admin/metadata", httptransport.NewServer(
+		ep.GetSchoolAdminMetadataEndpoint,
+		decodeGetSchoolAdminMetadataRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
 	))
@@ -102,6 +109,13 @@ func decodeGetSchoolAdminTokenRequest(ctx context.Context, r *http.Request) (any
 		return nil, governanceErrors.ErrBadRequest
 	}
 	return req, nil
+}
+
+func decodeGetSchoolAdminMetadataRequest(ctx context.Context, r *http.Request) (any, error) {
+	return endpoints.GetSchoolAdminMetadataRequest{
+		// get values extracted by the auth middleware
+		Claims: ctx.Value(AccessClaimsKey).(jwt.MapClaims),
+	}, nil
 }
 
 func decodeHTTPSendOTPRequest(_ context.Context, r *http.Request) (any, error) {

@@ -117,7 +117,7 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 							}
 						}
 					}
-				case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics", "/auth/token/school-admin":
+				case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics", "/auth/school-admin/token":
 					// no token in header
 				default:
 					if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
@@ -148,7 +148,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 			switch r.URL.Path {
 
 			// unprotected paths
-			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/auth/token/school-admin", "/metrics":
+			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/auth/school-admin/token", "/metrics":
 				next.ServeHTTP(w, r)
 				return
 

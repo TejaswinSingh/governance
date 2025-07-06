@@ -15,13 +15,22 @@ func (r ServiceStatusResponse) GetStatus() int { return r.Status }
 type GetSchoolAdminTokenRequest struct {
 	Email string `json:"email"`
 }
-
 type GetSchoolAdminTokenResponse struct {
 	Token  string `json:"token"`
 	Status int    `json:"status"`
 }
 
 func (r GetSchoolAdminTokenResponse) GetStatus() int { return r.Status }
+
+type GetSchoolAdminMetadataRequest struct {
+	Claims jwt.MapClaims
+}
+type GetSchoolAdminMetadataResponse struct {
+	MetaData *bson.M `json:"metadata,omitempty"`
+	Status   int     `json:"status"`
+}
+
+func (r GetSchoolAdminMetadataResponse) GetStatus() int { return r.Status }
 
 type SendOTPRequest struct {
 	CountryCode string `json:"country_code"`

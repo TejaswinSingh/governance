@@ -73,7 +73,7 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 	return doc, nil
 }
 
-func (s *governanceService) fetchMetaData(ctx context.Context, userID uuid.UUID) (bson.M, error) {
+func (s *governanceService) fetchParentMetaData(ctx context.Context, userID uuid.UUID) (bson.M, error) {
 	db := "metadata"
 	collUsers := s.svcStore.Mongo.GetCollection(db, "users")
 	collStudents := s.svcStore.Mongo.GetCollection(db, "students")
@@ -175,5 +175,76 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID uuid.UUID)
 	}
 
 	userDoc["linked_ids"] = students
+	return userDoc, nil
+}
+
+func (s *governanceService) fetchSchoolAdminMetaData(ctx context.Context, userID uuid.UUID) (bson.M, error) {
+	db := "metadata"
+	collUsers := s.svcStore.Mongo.GetCollection(db, "users")
+	collVehicles := s.svcStore.Mongo.GetCollection(db, "vehicles")
+	collRoutes := s.svcStore.Mongo.GetCollection(db, "routes")
+
+	id := uuidToBinary(userID)
+
+	// Fetch user
+	userDoc, err := s.getDoc(ctx, collUsers, bson.M{"_id": id})
+	if err != nil {
+		return nil, err
+	}
+
+	// check role exists
+	role, ok := userDoc["role"].(string)
+	if !ok || role == "" || role != string(auth.RoleSchoolAdmin) {
+		return nil, myerrors.ErrMissingMetaData
+	}
+
+	schoolID, ok := userDoc["school_id"].(string)
+	if !ok || schoolID == "" {
+		return nil, myerrors.ErrMissingMetaData
+	}
+
+	// fetch all vehicles that have the referenced schoolID
+	cursor, err := s.svcStore.Mongo.Find(ctx, collVehicles, bson.M{"school_id": schoolID})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var vehicles []bson.M
+
+	for cursor.Next(ctx) {
+		var vehicleDoc bson.M
+		if err := cursor.Decode(&vehicleDoc); err != nil {
+			return nil, myerrors.ErrMetaData.WithInternalErr(err)
+		}
+
+		routeIDs, ok := vehicleDoc["route_ids"].(bson.A)
+		if !ok || len(routeIDs) == 0 {
+			return nil, myerrors.ErrMetaData
+		}
+
+		var routes []bson.M
+		for _, rid := range routeIDs {
+			objID, ok := rid.(bson.ObjectID)
+			if !ok {
+				return nil, myerrors.ErrMetaData
+			}
+			routeDoc, err := s.getDoc(ctx, collRoutes, bson.M{"_id": objID})
+			if err != nil {
+				return nil, err
+			}
+			routes = append(routes, routeDoc)
+		}
+
+		vehicleDoc["route_ids"] = routes
+		vehicles = append(vehicles, vehicleDoc)
+	}
+
+	// convert user _id to string
+	if uuidStr, ok := uuidBinToString(userDoc["_id"]); ok {
+		userDoc["_id"] = uuidStr
+	}
+
+	userDoc["vehicles"] = vehicles
 	return userDoc, nil
 }

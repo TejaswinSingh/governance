@@ -68,3 +68,11 @@ func (m *MongoService) FindOne(ctx context.Context, coll *mongo.Collection, filt
 	}
 	return res, nil
 }
+
+func (m *MongoService) Find(ctx context.Context, coll *mongo.Collection, filter any) (*mongo.Cursor, error) {
+	cursor, err := coll.Find(ctx, filter)
+	if err != nil {
+		return nil, myerrors.ErrMongo.WithInternalErr(err)
+	}
+	return cursor, nil
+}

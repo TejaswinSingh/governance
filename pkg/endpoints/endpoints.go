@@ -11,12 +11,13 @@ import (
 
 type Set struct {
 	// http endpoints
-	ServiceStatusEndpoint       endpoint.Endpoint
-	GetSchoolAdminTokenEndpoint endpoint.Endpoint
-	SendOTPEndpoint             endpoint.Endpoint
-	LoginEndpoint               endpoint.Endpoint
-	LogoutEndpoint              endpoint.Endpoint
-	RefreshEndpoint             endpoint.Endpoint
+	ServiceStatusEndpoint          endpoint.Endpoint
+	GetSchoolAdminTokenEndpoint    endpoint.Endpoint
+	GetSchoolAdminMetadataEndpoint endpoint.Endpoint
+	SendOTPEndpoint                endpoint.Endpoint
+	LoginEndpoint                  endpoint.Endpoint
+	LogoutEndpoint                 endpoint.Endpoint
+	RefreshEndpoint                endpoint.Endpoint
 	// grpc endpoints
 	AuthenticateEndpoint endpoint.Endpoint
 	AuthorizeEndpoint    endpoint.Endpoint
@@ -24,14 +25,15 @@ type Set struct {
 
 func NewEndpointSet(svc governance.Service) Set {
 	return Set{
-		ServiceStatusEndpoint:       MakeServiceStatusEndpoint(svc),
-		GetSchoolAdminTokenEndpoint: MakeGetSchoolAdminTokenEndpoint(svc),
-		SendOTPEndpoint:             MakeSendOTPEndpoint(svc),
-		LoginEndpoint:               MakeLoginEndpoint(svc),
-		LogoutEndpoint:              MakeLogoutEndpoint(svc),
-		RefreshEndpoint:             MakeRefreshEndpoint(svc),
-		AuthenticateEndpoint:        MakeAuthenticateEndpoint(svc),
-		AuthorizeEndpoint:           MakeAuthorizeEndpoint(svc),
+		ServiceStatusEndpoint:          MakeServiceStatusEndpoint(svc),
+		GetSchoolAdminTokenEndpoint:    MakeGetSchoolAdminTokenEndpoint(svc),
+		GetSchoolAdminMetadataEndpoint: MakeGetSchoolAdminMetadataEndpoint(svc),
+		SendOTPEndpoint:                MakeSendOTPEndpoint(svc),
+		LoginEndpoint:                  MakeLoginEndpoint(svc),
+		LogoutEndpoint:                 MakeLogoutEndpoint(svc),
+		RefreshEndpoint:                MakeRefreshEndpoint(svc),
+		AuthenticateEndpoint:           MakeAuthenticateEndpoint(svc),
+		AuthorizeEndpoint:              MakeAuthorizeEndpoint(svc),
 	}
 }
 
@@ -56,6 +58,20 @@ func MakeGetSchoolAdminTokenEndpoint(svc governance.Service) endpoint.Endpoint {
 		return GetSchoolAdminTokenResponse{
 			Token:  token,
 			Status: status,
+		}, nil
+	}
+}
+
+func MakeGetSchoolAdminMetadataEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(GetSchoolAdminMetadataRequest)
+		mdata, status, err := svc.GetSchoolAdminMetadata(ctx, req.Claims)
+		if err != nil {
+			return nil, err
+		}
+		return GetSchoolAdminMetadataResponse{
+			MetaData: mdata,
+			Status:   status,
 		}, nil
 	}
 }

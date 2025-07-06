@@ -63,6 +63,23 @@ func (s *governanceService) GetSchoolAdminToken(ctx context.Context, email strin
 	return token, http.StatusOK, nil
 }
 
+func (s *governanceService) GetSchoolAdminMetadata(ctx context.Context, claims jwt.MapClaims) (*bson.M, int, error) {
+
+	id, _ := claims["sub"].(string)
+
+	userID, err := uuid.Parse(id)
+	if err != nil {
+		return nil, 0, errors.ErrInternalServer.WithInternalErr(err)
+	}
+
+	mdata, err := s.fetchSchoolAdminMetaData(ctx, userID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return &mdata, http.StatusOK, nil
+}
+
 func (s *governanceService) SendOTP(ctx context.Context, countryCode, phone string) (int, error) {
 	phone = countryCode + phone
 
@@ -98,7 +115,7 @@ func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp s
 	id := UUIDv5FromPhone(phone, s.envConfig.NamespaceUUID)
 
 	// fetch metadata
-	mdata, err := s.fetchMetaData(ctx, id)
+	mdata, err := s.fetchParentMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
 	}
@@ -168,7 +185,7 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	}
 
 	// fetch metadata
-	mdata, err := s.fetchMetaData(ctx, userID)
+	mdata, err := s.fetchParentMetaData(ctx, userID)
 	if err != nil {
 		return fail(err)
 	}
