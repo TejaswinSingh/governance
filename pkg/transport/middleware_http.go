@@ -181,13 +181,17 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 					return
 				}
 
-			default:
+			case "/auth/school-admin/metadata":
 				// access token
 				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 				if err != nil {
 					encodeError(r.Context(), err, w)
 					return
 				}
+			default:
+				// 404 paths
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			// authorization
