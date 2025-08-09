@@ -132,7 +132,7 @@ func main() {
 					_, err := redisService.Ping(ctx)
 					if err != nil {
 						mainLogger.Error(err, "RedisService | status disconnected")
-						return err
+						// return err
 					} else {
 						mainLogger.Info("RedisService | status healthy")
 					}
@@ -143,7 +143,9 @@ func main() {
 		}, func(err error) {
 			cancel()
 			mainLogger.ErrorNt(err, "RedisService | closing redis client")
-			_ = redisService.Close()
+			if err := redisService.Close(); err != nil {
+				mainLogger.ErrorNt(err, "RedisService | error closing redis client")
+			}
 		})
 	}
 
@@ -159,7 +161,7 @@ func main() {
 					err := mongoService.Ping(ctx)
 					if err != nil {
 						mainLogger.Error(err, "MongoService | status disconnected")
-						return err
+						// return err
 					} else {
 						mainLogger.Info("MongoService | status healthy")
 					}
@@ -172,7 +174,9 @@ func main() {
 			mainLogger.ErrorNt(err, "MongoService | disconnecting mongo  client")
 			ctx, cancelTimeout := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancelTimeout()
-			_ = mongoService.Disconnect(ctx)
+			if err := mongoService.Disconnect(ctx); err != nil {
+				mainLogger.ErrorNt(err, "MongoService | error disconnecting mongo client")
+			}
 		})
 	}
 
@@ -188,7 +192,7 @@ func main() {
 					err := casbinService.LoadPolicy()
 					if err != nil {
 						mainLogger.Error(err, "CasbinService | could not reload policy")
-						return err
+						// return err
 					} else {
 						mainLogger.Info("CasbinService | policy reloaded")
 					}
