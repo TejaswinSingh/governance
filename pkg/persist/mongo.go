@@ -28,7 +28,12 @@ type MongoService struct {
 
 func NewMongoService(uri string) (*MongoService, error) {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().SetTimeout(5 * time.Second).ApplyURI(uri).SetServerAPIOptions(serverAPI)
+	opts := options.Client().
+		SetTimeout(5 * time.Second).
+		ApplyURI(uri).
+		SetServerAPIOptions(serverAPI)
+		// SetMaxPoolSize(50).  // default: 100
+		// SetMinPoolSize(10)
 	client, err := mongo.Connect(opts)
 	if err != nil {
 		return nil, err

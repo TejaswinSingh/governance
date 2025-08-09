@@ -26,6 +26,7 @@ func NewRedisService(config *RedisConfiguration) *RedisService {
 			Addr:     fmt.Sprintf("%s:%s", config.Host, config.Port),
 			Password: config.Password,
 			DB:       config.Database,
+			// PoolSize: 100, default: 10 for each CPU
 		})}
 }
 
