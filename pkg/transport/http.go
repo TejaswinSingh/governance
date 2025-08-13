@@ -35,9 +35,9 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 	logger := logging.NewContextLogger(lw, "HttpHandler")
 
 	wrap := func(h http.Handler) http.Handler {
-		return AuthMiddleware(envConfig, svcStore)(
+		return TracingLoggingMetricsMiddleware(logger, envConfig, metrics)(
 			CORS(corsConfig)(
-				TracingLoggingMetricsMiddleware(logger, envConfig, metrics)(h),
+				AuthMiddleware(envConfig, svcStore)(h),
 			),
 		)
 	}
