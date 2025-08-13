@@ -32,64 +32,68 @@ const (
 func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfig *CorsOptions, svcStore *governance.ServiceStore, metrics *metrics.Metrics, lw logging.LogWriter) http.Handler {
 	m := http.NewServeMux()
 
-	m.Handle("/metrics", promhttp.Handler())
+	logger := logging.NewContextLogger(lw, "HttpHandler")
 
-	m.Handle("GET /governance/healthz", httptransport.NewServer(
+	wrap := func(h http.Handler) http.Handler {
+		return AuthMiddleware(envConfig, svcStore)(
+			CORS(corsConfig)(
+				TracingLoggingMetricsMiddleware(logger, envConfig, metrics)(h),
+			),
+		)
+	}
+
+	m.Handle("/metrics", wrap(promhttp.Handler()))
+
+	m.Handle("GET /governance/healthz", wrap(httptransport.NewServer(
 		ep.ServiceStatusEndpoint,
 		decodeHTTPServiceStatusRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError), // called automatically if error occurs in either of the following: decoder, endpoint, encoder
-	))
+	)))
 
-	m.Handle("POST /auth/school-admin/token", httptransport.NewServer(
+	m.Handle("POST /auth/school-admin/token", wrap(httptransport.NewServer(
 		ep.GetSchoolAdminTokenEndpoint,
 		decodeGetSchoolAdminTokenRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	m.Handle("POST /auth/school-admin/metadata", httptransport.NewServer(
+	m.Handle("POST /auth/school-admin/metadata", wrap(httptransport.NewServer(
 		ep.GetSchoolAdminMetadataEndpoint,
 		decodeGetSchoolAdminMetadataRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	m.Handle("POST /auth/request-otp", httptransport.NewServer(
+	m.Handle("POST /auth/request-otp", wrap(httptransport.NewServer(
 		ep.SendOTPEndpoint,
 		decodeHTTPSendOTPRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	m.Handle("POST /auth/login", httptransport.NewServer(
+	m.Handle("POST /auth/login", wrap(httptransport.NewServer(
 		ep.LoginEndpoint,
 		decodeHTTPLoginRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	m.Handle("POST /auth/logout", httptransport.NewServer(
+	m.Handle("POST /auth/logout", wrap(httptransport.NewServer(
 		ep.LogoutEndpoint,
 		decodeHTTPLogoutRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	m.Handle("POST /auth/refresh", httptransport.NewServer(
+	m.Handle("POST /auth/refresh", wrap(httptransport.NewServer(
 		ep.RefreshEndpoint,
 		decodeHTTPRefreshRequest,
 		makeEncodeResponse(envConfig),
 		httptransport.ServerErrorEncoder(encodeError),
-	))
+	)))
 
-	logger := logging.NewContextLogger(lw, "HttpHandler")
-
-	handler := AuthMiddleware(envConfig, svcStore)(m)
-	handler = CORS(corsConfig)(handler)
-	handler = TracingLoggingMetricsMiddleware(logger, envConfig, metrics)(handler)
-
-	return handler
+	return m
 }
 
 func decodeHTTPServiceStatusRequest(_ context.Context, _ *http.Request) (any, error) {
