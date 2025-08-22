@@ -91,9 +91,9 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 				metrics.RequestCount.With(labels...).Add(1)
 			}()
 
-			// don't trace preflight request and request to metrics endpoint
+			// don't trace request to metrics endpoint
 			// TODO: this check can be removed in prod
-			if r.Method != http.MethodOptions && r.URL.Path != "/metrics" {
+			if r.URL.Path != "/metrics" {
 
 				// requestID is required
 				reqID := r.Header.Get("X-Request-ID")
@@ -109,7 +109,7 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 
 				// try to obtain userID from token, wherever possible
 				switch r.URL.Path {
-				case "/auth/refresh":
+				case "/refresh":
 					if token, err := auth.ReadEncryptedCookie(r, string(auth.RefreshToken), envConfig.SecretKey); err == nil {
 						if claims, err := auth.ExtractClaims(token); err == nil {
 							if sub, ok := claims["sub"].(string); ok {
@@ -117,7 +117,7 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 							}
 						}
 					}
-				case "/governance/healthz", "/auth/request-otp", "/auth/login", "/metrics", "/auth/school-admin/token":
+				case "/healthz", "/request-otp", "/login", "/school-admin/token": //, "/metrics":
 					// no token in header
 				default:
 					if token, err := auth.ReadEncryptedCookie(r, string(auth.AccessToken), envConfig.SecretKey); err == nil {
@@ -148,11 +148,11 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 			switch r.URL.Path {
 
 			// unprotected paths
-			case "/governance/healthz", "/auth/request-otp", "/auth/login", "/auth/school-admin/token", "/metrics":
+			case "/healthz", "/request-otp", "/login", "/school-admin/token", "/metrics":
 				next.ServeHTTP(w, r)
 				return
 
-			case "/auth/refresh":
+			case "/refresh":
 				// refresh token
 				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.RefreshToken)
 				if err != nil {
@@ -160,7 +160,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 					return
 				}
 
-			case "/auth/logout":
+			case "/logout":
 				// access token
 				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 				if err != nil {
@@ -181,7 +181,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 					return
 				}
 
-			case "/auth/school-admin/metadata":
+			case "/school-admin/metadata":
 				// access token
 				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 				if err != nil {

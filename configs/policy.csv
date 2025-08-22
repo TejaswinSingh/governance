@@ -1,7 +1,7 @@
-p, admin, /governance/healthz, (GET|POST|PUT|DELETE), allow
-p, admin, /auth/logout, (GET|POST|PUT|DELETE), allow
-p, admin, /auth/refresh, (GET|POST|PUT|DELETE), allow
-p, parent, /governance/healthz, (GET), allow
+p, admin, /healthz, (GET|POST|PUT|DELETE), allow
+p, admin, /logout, (GET|POST|PUT|DELETE), allow
+p, admin, /refresh, (GET|POST|PUT|DELETE), allow
+p, parent, /healthz, (GET), allow
 p, teacher, /students, (GET|POST), allow
 
 p, admin, students_table, (READ|WRITE|DELETE), allow

@@ -9,7 +9,7 @@ servers:
     description: Local server
 
 paths:
-  /governance/healthz:
+  /healthz:
     get:
       summary: Check service health
       security:
@@ -32,7 +32,7 @@ paths:
         "403":
           description: Forbidden
 
-  /auth/login:
+  /login:
     post:
       summary: User login
       security: []
@@ -66,7 +66,7 @@ paths:
                   type: string
                 example:
                   - access_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
-                  - refresh_token=...; Path=/auth/; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -84,7 +84,7 @@ paths:
         "401":
           description: Unauthorized
 
-  /auth/logout:
+  /logout:
     post:
       summary: User logout
       security:
@@ -106,7 +106,7 @@ paths:
                   type: string
                 example:
                   - access_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Strict
-                  - refresh_token=; Path=/auth/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:
@@ -122,7 +122,7 @@ paths:
         "403":
           description: Forbidden
 
-  /auth/refresh:
+  /refresh:
     post:
       summary: Refresh access token
       security:
@@ -143,7 +143,7 @@ paths:
                   type: string
                 example:
                   - access_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
-                  - refresh_token=...; Path=/auth/; HttpOnly; Secure; SameSite=Strict
+                  - refresh_token=...; Path=/; HttpOnly; Secure; SameSite=Strict
           content:
             application/json:
               schema:

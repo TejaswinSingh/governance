@@ -175,7 +175,7 @@ func SetAuthCookie(w http.ResponseWriter, secretKey []byte, token AuthToken, val
 	case RefreshToken:
 		maxAge = int(RefreshTokenExpiry.Seconds())
 		expires = time.Now().Add(RefreshTokenExpiry)
-		path = "/auth/"
+		path = "/"
 	}
 	c := &http.Cookie{
 		Name:     string(token),
@@ -197,7 +197,7 @@ func ClearAuthCookie(w http.ResponseWriter, token AuthToken) {
 	case AccessToken:
 		path = "/"
 	case RefreshToken:
-		path = "/auth/"
+		path = "/"
 	}
 	// no need to encrypt, since value is empty
 	http.SetCookie(w, &http.Cookie{
