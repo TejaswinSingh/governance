@@ -81,8 +81,8 @@ func NewEnvironmentConfiguration() Configuration {
 		Mongo: persist.MongoConfiguration{
 			Host:     envString("MONGO_HOST", defaultMongoHost),
 			Port:     envString("MONGO_PORT", defaultMongoPort),
-			Username: requireEnv("MONGODB_INITDB_ROOT_USERNAME"),
-			Password: requireEnv("MONGODB_INITDB_ROOT_PASSWORD"),
+			Username: requireEnv("MONGO_GOVERNANCE_USER"),
+			Password: requireEnv("MONGO_GOVERNANCE_PASSWORD"),
 		},
 	}
 }
