@@ -78,6 +78,10 @@ func toPBClaims(m jwt.MapClaims) *pb.Claims {
 		Exp:  getInt64Claim(m, "exp"),
 		Type: getStringClaim(m, "type"),
 		Role: getStringClaim(m, "role"),
+		ParentClaims: &pb.ParentClaims{
+			LinkedStudents:    getStringArrayClaim(m, "linked_students"),
+			DelegatedStudents: getStringArrayClaim(m, "delegated_students"),
+		},
 	}
 }
 
@@ -88,6 +92,15 @@ func getStringClaim(m jwt.MapClaims, key string) string {
 		}
 	}
 	return ""
+}
+
+func getStringArrayClaim(m jwt.MapClaims, key string) []string {
+	if val, ok := m[key]; ok {
+		if s, ok := val.([]string); ok {
+			return s
+		}
+	}
+	return nil
 }
 
 func getInt64Claim(m jwt.MapClaims, key string) int64 {

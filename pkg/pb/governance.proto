@@ -10,6 +10,11 @@ service Governance {
     rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse) {}
 }
 
+message ParentClaims {
+    repeated string linked_students = 1;
+    repeated string delegated_students = 2;
+}
+
 message Claims {
     string sub = 1;
     string aud = 2;
@@ -18,6 +23,7 @@ message Claims {
     int64 exp = 5;
     string type = 6;
     string role = 7;
+    ParentClaims parent_claims = 8;
 }
 
 message ServiceStatusRequest {}

@@ -21,34 +21,48 @@ const (
 	AccessToken                  AuthToken = "access_token"
 	RefreshToken                 AuthToken = "refresh_token"
 	RoleParent                   Role      = "parent"
+	RoleDelegateParent           Role      = "delegate-parent"
 	RoleSchoolAdmin              Role      = "school-admin"
-	AccessTokenExpiry                      = time.Minute * 15     // 15 minutes
+	AccessTokenExpiry                      = time.Minute * 5      // 5 minutes
 	SchoolAdminAccessTokenExpiry           = time.Hour * 24 * 365 // 1 year
 	RefreshTokenExpiry                     = time.Hour * 24 * 15  // 15 days
 )
 
-func CreateToken(id string, role Role, secretKey []byte, token AuthToken, now time.Time) (string, error) {
+type OtherClaims struct {
+	Name string
+	Val  any
+}
+
+func CreateToken(id string, role Role, secretKey []byte, tk AuthToken, now time.Time, ot *OtherClaims) (string, error) {
 	var exp time.Duration
-	if token == AccessToken {
+
+	if tk == AccessToken {
 		if role == RoleSchoolAdmin {
 			exp = SchoolAdminAccessTokenExpiry
-		} else {
+		} else { // when role is either parent or delegate-parent
 			exp = AccessTokenExpiry
 		}
 	} else { // refresh
 		exp = RefreshTokenExpiry
 	}
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"type": string(token),         // Type of token
-		"sub":  id,                    // Subject (user identifier)
-		"iss":  "resolyte.governance", // Issuer
-		"aud":  "resolyte.users",      // Audience
-		"role": role,                  // user role
-		"exp":  now.Add(exp).Unix(),   // Expiration time
-		"iat":  now.Unix(),            // Issued at
-	})
 
-	tokenString, err := claims.SignedString(secretKey)
+	mapClaims := jwt.MapClaims{
+		"type": string(tk),          // Type of token
+		"sub":  id,                  // Subject (user identifier)
+		"iss":  "auth.abcdery.com",  // Issuer
+		"aud":  "abcdery.users",     // Audience
+		"role": role,                // user role
+		"iat":  now.Unix(),          // Issued at
+		"exp":  now.Add(exp).Unix(), // Expiration time
+	}
+
+	if ot != nil {
+		mapClaims[ot.Name] = ot.Val
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, mapClaims)
+
+	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
 		return "", myerrors.ErrCreateJWT.WithInternalErr(err)
 	}

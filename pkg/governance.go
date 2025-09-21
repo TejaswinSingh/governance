@@ -50,7 +50,7 @@ func (s *governanceService) GetSchoolAdminToken(ctx context.Context, email strin
 	}
 
 	role := userDoc["role"].(string)
-	token, err = auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, time.Now())
+	token, err = auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, time.Now(), nil)
 	if err != nil {
 		return "", 0, err
 	}
@@ -115,7 +115,7 @@ func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp s
 	id := UUIDv5FromPhone(phone, s.envConfig.NamespaceUUID)
 
 	// fetch metadata
-	mdata, err := s.fetchParentMetaData(ctx, id)
+	mdata, ot, err := s.fetchMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
 	}
@@ -124,11 +124,11 @@ func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp s
 
 	// create tokens
 	now := time.Now()
-	tokenAccess, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now)
+	tokenAccess, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now, ot)
 	if err != nil {
 		return fail(err)
 	}
-	tokenRefresh, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now)
+	tokenRefresh, err := auth.CreateToken(id.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now, ot)
 	if err != nil {
 		return fail(err)
 	}
@@ -173,19 +173,19 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 		return fail(errors.ErrInvalidClaims)
 	}
 
-	// create new tokens
-	now := time.Now()
-	tokenAccess, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now)
-	if err != nil {
-		return fail(err)
-	}
-	tokenRefresh, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now)
+	// fetch metadata
+	mdata, ot, err := s.fetchMetaData(ctx, userID)
 	if err != nil {
 		return fail(err)
 	}
 
-	// fetch metadata
-	mdata, err := s.fetchParentMetaData(ctx, userID)
+	// create new tokens
+	now := time.Now()
+	tokenAccess, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.AccessToken, now, ot)
+	if err != nil {
+		return fail(err)
+	}
+	tokenRefresh, err := auth.CreateToken(userID.String(), auth.Role(role), s.envConfig.SecretKey, auth.RefreshToken, now, ot)
 	if err != nil {
 		return fail(err)
 	}

@@ -21,6 +21,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ParentClaims struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	LinkedStudents    []string               `protobuf:"bytes,1,rep,name=linked_students,json=linkedStudents,proto3" json:"linked_students,omitempty"`
+	DelegatedStudents []string               `protobuf:"bytes,2,rep,name=delegated_students,json=delegatedStudents,proto3" json:"delegated_students,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *ParentClaims) Reset() {
+	*x = ParentClaims{}
+	mi := &file_pkg_pb_governance_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ParentClaims) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ParentClaims) ProtoMessage() {}
+
+func (x *ParentClaims) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_pb_governance_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ParentClaims.ProtoReflect.Descriptor instead.
+func (*ParentClaims) Descriptor() ([]byte, []int) {
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ParentClaims) GetLinkedStudents() []string {
+	if x != nil {
+		return x.LinkedStudents
+	}
+	return nil
+}
+
+func (x *ParentClaims) GetDelegatedStudents() []string {
+	if x != nil {
+		return x.DelegatedStudents
+	}
+	return nil
+}
+
 type Claims struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sub           string                 `protobuf:"bytes,1,opt,name=sub,proto3" json:"sub,omitempty"`
@@ -30,13 +82,14 @@ type Claims struct {
 	Exp           int64                  `protobuf:"varint,5,opt,name=exp,proto3" json:"exp,omitempty"`
 	Type          string                 `protobuf:"bytes,6,opt,name=type,proto3" json:"type,omitempty"`
 	Role          string                 `protobuf:"bytes,7,opt,name=role,proto3" json:"role,omitempty"`
+	ParentClaims  *ParentClaims          `protobuf:"bytes,8,opt,name=parent_claims,json=parentClaims,proto3" json:"parent_claims,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Claims) Reset() {
 	*x = Claims{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[0]
+	mi := &file_pkg_pb_governance_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -48,7 +101,7 @@ func (x *Claims) String() string {
 func (*Claims) ProtoMessage() {}
 
 func (x *Claims) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[0]
+	mi := &file_pkg_pb_governance_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -61,7 +114,7 @@ func (x *Claims) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claims.ProtoReflect.Descriptor instead.
 func (*Claims) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{0}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Claims) GetSub() string {
@@ -113,6 +166,13 @@ func (x *Claims) GetRole() string {
 	return ""
 }
 
+func (x *Claims) GetParentClaims() *ParentClaims {
+	if x != nil {
+		return x.ParentClaims
+	}
+	return nil
+}
+
 type ServiceStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -121,7 +181,7 @@ type ServiceStatusRequest struct {
 
 func (x *ServiceStatusRequest) Reset() {
 	*x = ServiceStatusRequest{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[1]
+	mi := &file_pkg_pb_governance_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -133,7 +193,7 @@ func (x *ServiceStatusRequest) String() string {
 func (*ServiceStatusRequest) ProtoMessage() {}
 
 func (x *ServiceStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[1]
+	mi := &file_pkg_pb_governance_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -146,7 +206,7 @@ func (x *ServiceStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceStatusRequest.ProtoReflect.Descriptor instead.
 func (*ServiceStatusRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{1}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{2}
 }
 
 type ServiceStatusResponse struct {
@@ -158,7 +218,7 @@ type ServiceStatusResponse struct {
 
 func (x *ServiceStatusResponse) Reset() {
 	*x = ServiceStatusResponse{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[2]
+	mi := &file_pkg_pb_governance_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -170,7 +230,7 @@ func (x *ServiceStatusResponse) String() string {
 func (*ServiceStatusResponse) ProtoMessage() {}
 
 func (x *ServiceStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[2]
+	mi := &file_pkg_pb_governance_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -183,7 +243,7 @@ func (x *ServiceStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServiceStatusResponse.ProtoReflect.Descriptor instead.
 func (*ServiceStatusResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{2}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ServiceStatusResponse) GetStatus() int64 {
@@ -202,7 +262,7 @@ type AuthenticateRequest struct {
 
 func (x *AuthenticateRequest) Reset() {
 	*x = AuthenticateRequest{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[3]
+	mi := &file_pkg_pb_governance_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -214,7 +274,7 @@ func (x *AuthenticateRequest) String() string {
 func (*AuthenticateRequest) ProtoMessage() {}
 
 func (x *AuthenticateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[3]
+	mi := &file_pkg_pb_governance_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -227,7 +287,7 @@ func (x *AuthenticateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthenticateRequest.ProtoReflect.Descriptor instead.
 func (*AuthenticateRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{3}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *AuthenticateRequest) GetToken() string {
@@ -248,7 +308,7 @@ type AuthenticateResponse struct {
 
 func (x *AuthenticateResponse) Reset() {
 	*x = AuthenticateResponse{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[4]
+	mi := &file_pkg_pb_governance_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -260,7 +320,7 @@ func (x *AuthenticateResponse) String() string {
 func (*AuthenticateResponse) ProtoMessage() {}
 
 func (x *AuthenticateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[4]
+	mi := &file_pkg_pb_governance_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -273,7 +333,7 @@ func (x *AuthenticateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthenticateResponse.ProtoReflect.Descriptor instead.
 func (*AuthenticateResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{4}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *AuthenticateResponse) GetClaims() *Claims {
@@ -308,7 +368,7 @@ type AuthorizeRequest struct {
 
 func (x *AuthorizeRequest) Reset() {
 	*x = AuthorizeRequest{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[5]
+	mi := &file_pkg_pb_governance_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -320,7 +380,7 @@ func (x *AuthorizeRequest) String() string {
 func (*AuthorizeRequest) ProtoMessage() {}
 
 func (x *AuthorizeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[5]
+	mi := &file_pkg_pb_governance_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -333,7 +393,7 @@ func (x *AuthorizeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthorizeRequest.ProtoReflect.Descriptor instead.
 func (*AuthorizeRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{5}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *AuthorizeRequest) GetToken() string {
@@ -369,7 +429,7 @@ type AuthorizeResponse struct {
 
 func (x *AuthorizeResponse) Reset() {
 	*x = AuthorizeResponse{}
-	mi := &file_pkg_pb_governance_proto_msgTypes[6]
+	mi := &file_pkg_pb_governance_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -381,7 +441,7 @@ func (x *AuthorizeResponse) String() string {
 func (*AuthorizeResponse) ProtoMessage() {}
 
 func (x *AuthorizeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_pb_governance_proto_msgTypes[6]
+	mi := &file_pkg_pb_governance_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -394,7 +454,7 @@ func (x *AuthorizeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuthorizeResponse.ProtoReflect.Descriptor instead.
 func (*AuthorizeResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{6}
+	return file_pkg_pb_governance_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *AuthorizeResponse) GetEft() bool {
@@ -429,7 +489,10 @@ var File_pkg_pb_governance_proto protoreflect.FileDescriptor
 
 const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\n" +
-	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"\x8a\x01\n" +
+	"\x17pkg/pb/governance.proto\x12\rgovernance_pb\"f\n" +
+	"\fParentClaims\x12'\n" +
+	"\x0flinked_students\x18\x01 \x03(\tR\x0elinkedStudents\x12-\n" +
+	"\x12delegated_students\x18\x02 \x03(\tR\x11delegatedStudents\"\xcc\x01\n" +
 	"\x06Claims\x12\x10\n" +
 	"\x03sub\x18\x01 \x01(\tR\x03sub\x12\x10\n" +
 	"\x03aud\x18\x02 \x01(\tR\x03aud\x12\x10\n" +
@@ -437,7 +500,8 @@ const file_pkg_pb_governance_proto_rawDesc = "" +
 	"\x03iat\x18\x04 \x01(\x03R\x03iat\x12\x10\n" +
 	"\x03exp\x18\x05 \x01(\x03R\x03exp\x12\x12\n" +
 	"\x04type\x18\x06 \x01(\tR\x04type\x12\x12\n" +
-	"\x04role\x18\a \x01(\tR\x04role\"\x16\n" +
+	"\x04role\x18\a \x01(\tR\x04role\x12@\n" +
+	"\rparent_claims\x18\b \x01(\v2\x1b.governance_pb.ParentClaimsR\fparentClaims\"\x16\n" +
 	"\x14ServiceStatusRequest\"/\n" +
 	"\x15ServiceStatusResponse\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\x03R\x06status\"+\n" +
@@ -474,30 +538,32 @@ func file_pkg_pb_governance_proto_rawDescGZIP() []byte {
 	return file_pkg_pb_governance_proto_rawDescData
 }
 
-var file_pkg_pb_governance_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_pkg_pb_governance_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_pkg_pb_governance_proto_goTypes = []any{
-	(*Claims)(nil),                // 0: governance_pb.Claims
-	(*ServiceStatusRequest)(nil),  // 1: governance_pb.ServiceStatusRequest
-	(*ServiceStatusResponse)(nil), // 2: governance_pb.ServiceStatusResponse
-	(*AuthenticateRequest)(nil),   // 3: governance_pb.AuthenticateRequest
-	(*AuthenticateResponse)(nil),  // 4: governance_pb.AuthenticateResponse
-	(*AuthorizeRequest)(nil),      // 5: governance_pb.AuthorizeRequest
-	(*AuthorizeResponse)(nil),     // 6: governance_pb.AuthorizeResponse
+	(*ParentClaims)(nil),          // 0: governance_pb.ParentClaims
+	(*Claims)(nil),                // 1: governance_pb.Claims
+	(*ServiceStatusRequest)(nil),  // 2: governance_pb.ServiceStatusRequest
+	(*ServiceStatusResponse)(nil), // 3: governance_pb.ServiceStatusResponse
+	(*AuthenticateRequest)(nil),   // 4: governance_pb.AuthenticateRequest
+	(*AuthenticateResponse)(nil),  // 5: governance_pb.AuthenticateResponse
+	(*AuthorizeRequest)(nil),      // 6: governance_pb.AuthorizeRequest
+	(*AuthorizeResponse)(nil),     // 7: governance_pb.AuthorizeResponse
 }
 var file_pkg_pb_governance_proto_depIdxs = []int32{
-	0, // 0: governance_pb.AuthenticateResponse.claims:type_name -> governance_pb.Claims
-	0, // 1: governance_pb.AuthorizeResponse.claims:type_name -> governance_pb.Claims
-	1, // 2: governance_pb.Governance.ServiceStatus:input_type -> governance_pb.ServiceStatusRequest
-	3, // 3: governance_pb.Governance.Authenticate:input_type -> governance_pb.AuthenticateRequest
-	5, // 4: governance_pb.Governance.Authorize:input_type -> governance_pb.AuthorizeRequest
-	2, // 5: governance_pb.Governance.ServiceStatus:output_type -> governance_pb.ServiceStatusResponse
-	4, // 6: governance_pb.Governance.Authenticate:output_type -> governance_pb.AuthenticateResponse
-	6, // 7: governance_pb.Governance.Authorize:output_type -> governance_pb.AuthorizeResponse
-	5, // [5:8] is the sub-list for method output_type
-	2, // [2:5] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	0, // 0: governance_pb.Claims.parent_claims:type_name -> governance_pb.ParentClaims
+	1, // 1: governance_pb.AuthenticateResponse.claims:type_name -> governance_pb.Claims
+	1, // 2: governance_pb.AuthorizeResponse.claims:type_name -> governance_pb.Claims
+	2, // 3: governance_pb.Governance.ServiceStatus:input_type -> governance_pb.ServiceStatusRequest
+	4, // 4: governance_pb.Governance.Authenticate:input_type -> governance_pb.AuthenticateRequest
+	6, // 5: governance_pb.Governance.Authorize:input_type -> governance_pb.AuthorizeRequest
+	3, // 6: governance_pb.Governance.ServiceStatus:output_type -> governance_pb.ServiceStatusResponse
+	5, // 7: governance_pb.Governance.Authenticate:output_type -> governance_pb.AuthenticateResponse
+	7, // 8: governance_pb.Governance.Authorize:output_type -> governance_pb.AuthorizeResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_pkg_pb_governance_proto_init() }
@@ -511,7 +577,7 @@ func file_pkg_pb_governance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_pkg_pb_governance_proto_rawDesc), len(file_pkg_pb_governance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
