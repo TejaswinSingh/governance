@@ -1,5 +1,3 @@
-.PHONY: generate_cert update_gomod build_proto mod_update_proto docker_build docker_push docker_release
-
 TAG ?= latest
 
 generate_cert:
@@ -18,6 +16,10 @@ build_proto:
 	@protoc --go_out=. --go_opt=paths=source_relative \
     --go-grpc_out=. --go-grpc_opt=paths=source_relative \
     pkg/pb/governance.proto
+
+generate_docs:
+	@npx @redocly/cli build-docs docs/public-api.yaml -o docs/api.html
+	@echo "docs generated at docs/api.html"
 
 mod_update_proto:
 	@echo "Updating proto-related Go modules..."
