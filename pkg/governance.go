@@ -115,7 +115,7 @@ func (s *governanceService) Login(ctx context.Context, countryCode, phone, otp s
 	id := UUIDv5FromPhone(phone, s.envConfig.NamespaceUUID)
 
 	// fetch metadata
-	mdata, ot, err := s.fetchMetaData(ctx, id)
+	mdata, ot, err := s.fetchUserMetaData(ctx, id)
 	if err != nil {
 		return fail(err)
 	}
@@ -174,7 +174,7 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	}
 
 	// fetch metadata
-	mdata, ot, err := s.fetchMetaData(ctx, userID)
+	mdata, ot, err := s.fetchUserMetaData(ctx, userID)
 	if err != nil {
 		return fail(err)
 	}

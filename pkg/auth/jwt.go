@@ -21,7 +21,7 @@ const (
 	AccessToken                  AuthToken = "access_token"
 	RefreshToken                 AuthToken = "refresh_token"
 	RoleParent                   Role      = "parent"
-	RoleDelegateParent           Role      = "delegate-parent"
+	RoleGuardian                 Role      = "guardian"
 	RoleSchoolAdmin              Role      = "school-admin"
 	AccessTokenExpiry                      = time.Minute * 5      // 5 minutes
 	SchoolAdminAccessTokenExpiry           = time.Hour * 24 * 365 // 1 year
@@ -39,7 +39,7 @@ func CreateToken(id string, role Role, secretKey []byte, tk AuthToken, now time.
 	if tk == AccessToken {
 		if role == RoleSchoolAdmin {
 			exp = SchoolAdminAccessTokenExpiry
-		} else { // when role is either parent or delegate-parent
+		} else { // when role is either parent or guardian
 			exp = AccessTokenExpiry
 		}
 	} else { // refresh
@@ -135,6 +135,9 @@ func VerifyToken(ctx context.Context, redisService *persist.RedisService, tokenS
 	// validate role
 	role, ok := claims["role"].(string)
 	if !ok || role == "" {
+		return nil, myerrors.ErrInvalidClaims
+	}
+	if role != string(RoleParent) && role != string(RoleGuardian) && role != string(RoleSchoolAdmin) {
 		return nil, myerrors.ErrInvalidClaims
 	}
 

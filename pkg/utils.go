@@ -74,7 +74,7 @@ func (s *governanceService) getDoc(ctx context.Context, coll *mongo.Collection, 
 	return doc, nil
 }
 
-func (s *governanceService) fetchMetaData(ctx context.Context, userID uuid.UUID) (bson.M, *auth.OtherClaims, error) {
+func (s *governanceService) fetchUserMetaData(ctx context.Context, userID uuid.UUID) (bson.M, *auth.OtherClaims, error) {
 	db := "metadata"
 	collUsers := s.svcStore.Mongo.GetCollection(db, "users")
 
@@ -96,8 +96,8 @@ func (s *governanceService) fetchMetaData(ctx context.Context, userID uuid.UUID)
 		}
 		return nil, nil, err
 
-	} else if strings.EqualFold(role, string(auth.RoleDelegateParent)) {
-		if doc, ot, err := s.fetchDelegateParentMetaData(ctx, userDoc); err == nil {
+	} else if strings.EqualFold(role, string(auth.RoleGuardian)) {
+		if doc, ot, err := s.fetchGuardianMetaData(ctx, userDoc); err == nil {
 			return doc, ot, nil
 		}
 		return nil, nil, err
@@ -316,7 +316,7 @@ func (s *governanceService) fetchParentMetaData(ctx context.Context, userDoc bso
 	return userDoc, ot, nil
 }
 
-func (s *governanceService) fetchDelegateParentMetaData(ctx context.Context, userDoc bson.M) (bson.M, *auth.OtherClaims, error) {
+func (s *governanceService) fetchGuardianMetaData(ctx context.Context, userDoc bson.M) (bson.M, *auth.OtherClaims, error) {
 	db := "metadata"
 	collStudents := s.svcStore.Mongo.GetCollection(db, "students")
 	collVehicles := s.svcStore.Mongo.GetCollection(db, "vehicles")
