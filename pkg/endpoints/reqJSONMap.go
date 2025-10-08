@@ -85,6 +85,30 @@ func (r RefreshResponse) GetAccessToken() string  { return r.TokenAccess }
 func (r RefreshResponse) GetRefreshToken() string { return r.TokenRefresh }
 func (r RefreshResponse) GetStatus() int          { return r.Status }
 
+type DelegateAccessRequest struct {
+	ParentID      string
+	GuardianPhone string   `json:"guardian_phone"`
+	StudentIDs    []string `json:"student_ids"`
+}
+type DelegateAccessResponse struct {
+	Status int    `json:"status"`
+	ErrMsg string `json:"error,omitempty"`
+}
+
+func (r DelegateAccessResponse) GetStatus() int { return r.Status }
+
+type RevokeAccessRequest struct {
+	ParentID   string
+	GuardianID string   `json:"guardian_id"`
+	StudentIDs []string `json:"student_ids"`
+}
+type RevokeAccessResponse struct {
+	Status int    `json:"status"`
+	ErrMsg string `json:"error,omitempty"`
+}
+
+func (r RevokeAccessResponse) GetStatus() int { return r.Status }
+
 type AuthenticateRequest struct {
 	Token string
 }

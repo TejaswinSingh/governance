@@ -12,6 +12,7 @@ import (
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
 	"github.com/Resolyte-official/service-governance/pkg/config"
+	"github.com/Resolyte-official/service-governance/pkg/contextkeys"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/metrics"
@@ -106,6 +107,9 @@ func TracingLoggingMetricsMiddleware(logger logging.Logger, envConfig *config.Co
 					return
 				}
 				logE.RequestID = reqID
+				// grpc client sends requestID within the context when making calls
+				ctx := context.WithValue(r.Context(), contextkeys.RequestIDKey, reqID)
+				r = r.WithContext(ctx)
 
 				// try to obtain userID from token, wherever possible
 				switch r.URL.Path {
@@ -181,7 +185,7 @@ func AuthMiddleware(envConfig *config.Configuration, svcStore *governance.Servic
 					return
 				}
 
-			case "/school-admin/metadata":
+			case "/school-admin/metadata", "/access/delegate", "/access/revoke":
 				// access token
 				r, claims, err = extractAndVerifyToken(r, svcStore.Redis, envConfig.SecretKey, auth.AccessToken)
 				if err != nil {

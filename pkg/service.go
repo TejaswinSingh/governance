@@ -17,4 +17,6 @@ type Service interface {
 	Refresh(ctx context.Context, curTokenRefresh string, claims jwt.MapClaims) (tokenAccess, tokenRefresh string, mdata *bson.M, status int, err error)
 	Authenticate(ctx context.Context, token string) (claims jwt.MapClaims, status int, err error)
 	Authorize(ctx context.Context, token, obj, act string) (eft bool, claims jwt.MapClaims, status int, err error)
+	DelegateAccess(ctx context.Context, parentID, guardianPhone string, studentIDs []string) (respStatus int, respErrorMsg string, err error)
+	RevokeAccess(ctx context.Context, parentID, guardianID string, studentIDs []string) (respStatus int, respErrorMsg string, err error)
 }

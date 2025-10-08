@@ -10,17 +10,19 @@ import (
 	"syscall"
 	"time"
 
+	pb "github.com/Resolyte-official/gen_proto/pkg/governance"
 	governance "github.com/Resolyte-official/service-governance/pkg"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
+	grpcClient "github.com/Resolyte-official/service-governance/pkg/client/grpc"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/metrics"
-	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/Resolyte-official/service-governance/pkg/persist"
 	"github.com/Resolyte-official/service-governance/pkg/transport"
 	"github.com/Resolyte-official/service-governance/pkg/twilio"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oklog/oklog/pkg/group"
 )
@@ -44,6 +46,13 @@ func main() {
 		requireFile("configs/cert.pem")
 		requireFile("configs/key.pem")
 	}
+
+	creds := insecure.NewCredentials() // TODO: use mTLS
+	mdGrpcClient, err := grpcClient.NewMetadataClient(envConfig.MetadataGrpcAddr, creds)
+	if err != nil {
+		panic(err)
+	}
+	defer mdGrpcClient.Close()
 
 	mongoURI := persist.CreateMongoURI(&envConfig.Mongo)
 	mongoService, err := persist.NewMongoService(mongoURI)
@@ -72,7 +81,7 @@ func main() {
 		}
 		metrics      = metrics.NewGovernanceMetrics()
 		twilioClient = twilio.NewTwilioClient(&envConfig)
-		service      = governance.NewService(&envConfig, store, twilioClient)
+		service      = governance.NewService(&envConfig, store, twilioClient, mdGrpcClient)
 		eps          = endpoints.NewEndpointSet(service)
 		httpHandler  = transport.NewHTTPHandler(eps, &envConfig, corsConfig, store, metrics, lw)
 		grpcServer   = transport.NewGRPCServer(eps, &envConfig, metrics, lw)

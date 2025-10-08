@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"reflect"
 
+	pb "github.com/Resolyte-official/gen_proto/pkg/governance"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
-	"github.com/Resolyte-official/service-governance/pkg/pb"
 	"github.com/golang-jwt/jwt/v5"
 )
 

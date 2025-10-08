@@ -91,6 +91,25 @@ func NewHTTPHandler(ep endpoints.Set, envConfig *config.Configuration, corsConfi
 		httptransport.ServerErrorEncoder(encodeError),
 	)))
 
+	m.Handle("POST /access/delegate", wrap(httptransport.NewServer(
+		ep.DelegateAccessEndpoint,
+		decodeHTTPDelegateAccessRequest,
+		makeEncodeResponse(envConfig),
+		httptransport.ServerErrorEncoder(encodeError),
+	)))
+
+	m.Handle("POST /access/revoke", wrap(httptransport.NewServer(
+		ep.RevokeAccessEndpoint,
+		decodeHTTPRevokeAccessRequest,
+		makeEncodeResponse(envConfig),
+		httptransport.ServerErrorEncoder(encodeError),
+	)))
+
+	// match all: return 404
+	m.Handle("/", wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "404 not found", http.StatusNotFound)
+	})))
+
 	return CORS(corsConfig)(m)
 }
 
@@ -168,6 +187,52 @@ func decodeHTTPRefreshRequest(ctx context.Context, r *http.Request) (any, error)
 		TokenRefresh:  ctx.Value(RefreshTokenKey).(string),
 		ClaimsRefresh: ctx.Value(RefreshClaimsKey).(jwt.MapClaims),
 	}, nil
+}
+
+func decodeHTTPDelegateAccessRequest(ctx context.Context, r *http.Request) (any, error) {
+	var req endpoints.DelegateAccessRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&req)
+	if err != nil {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.GuardianPhone = strings.TrimSpace(req.GuardianPhone)
+	if req.GuardianPhone == "" || len(req.StudentIDs) < 1 {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	claims, ok := ctx.Value(AccessClaimsKey).(jwt.MapClaims)
+	if !ok {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.ParentID, ok = claims["sub"].(string)
+	if !ok {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	return req, nil
+}
+
+func decodeHTTPRevokeAccessRequest(ctx context.Context, r *http.Request) (any, error) {
+	var req endpoints.RevokeAccessRequest
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(&req)
+	if err != nil {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.GuardianID = strings.TrimSpace(req.GuardianID)
+	if req.GuardianID == "" || len(req.StudentIDs) < 1 {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	claims, ok := ctx.Value(AccessClaimsKey).(jwt.MapClaims)
+	if !ok {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	req.ParentID, ok = claims["sub"].(string)
+	if !ok {
+		return nil, governanceErrors.ErrBadRequest
+	}
+	return req, nil
 }
 
 func makeEncodeResponse(envConfig *config.Configuration) httptransport.EncodeResponseFunc {

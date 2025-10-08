@@ -18,6 +18,8 @@ type Set struct {
 	LoginEndpoint                  endpoint.Endpoint
 	LogoutEndpoint                 endpoint.Endpoint
 	RefreshEndpoint                endpoint.Endpoint
+	DelegateAccessEndpoint         endpoint.Endpoint
+	RevokeAccessEndpoint           endpoint.Endpoint
 	// grpc endpoints
 	AuthenticateEndpoint endpoint.Endpoint
 	AuthorizeEndpoint    endpoint.Endpoint
@@ -32,6 +34,8 @@ func NewEndpointSet(svc governance.Service) Set {
 		LoginEndpoint:                  MakeLoginEndpoint(svc),
 		LogoutEndpoint:                 MakeLogoutEndpoint(svc),
 		RefreshEndpoint:                MakeRefreshEndpoint(svc),
+		DelegateAccessEndpoint:         MakeDelegateAccessEndpoint(svc),
+		RevokeAccessEndpoint:           MakeRevokeAccessEndpoint(svc),
 		AuthenticateEndpoint:           MakeAuthenticateEndpoint(svc),
 		AuthorizeEndpoint:              MakeAuthorizeEndpoint(svc),
 	}
@@ -126,6 +130,34 @@ func MakeRefreshEndpoint(svc governance.Service) endpoint.Endpoint {
 			TokenRefresh: tokenRefresh,
 			MetaData:     mdata,
 			Status:       status,
+		}, nil
+	}
+}
+
+func MakeDelegateAccessEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(DelegateAccessRequest)
+		status, errMsg, err := svc.DelegateAccess(ctx, req.ParentID, req.GuardianPhone, req.StudentIDs)
+		if err != nil {
+			return nil, err
+		}
+		return DelegateAccessResponse{
+			Status: status,
+			ErrMsg: errMsg,
+		}, nil
+	}
+}
+
+func MakeRevokeAccessEndpoint(svc governance.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request any) (any, error) {
+		req := request.(RevokeAccessRequest)
+		status, errMsg, err := svc.RevokeAccess(ctx, req.ParentID, req.GuardianID, req.StudentIDs)
+		if err != nil {
+			return nil, err
+		}
+		return RevokeAccessResponse{
+			Status: status,
+			ErrMsg: errMsg,
 		}, nil
 	}
 }

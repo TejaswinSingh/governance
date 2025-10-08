@@ -6,7 +6,9 @@ import (
 	"net/mail"
 	"time"
 
+	gen_proto "github.com/Resolyte-official/gen_proto/pkg/metadata"
 	"github.com/Resolyte-official/service-governance/pkg/auth"
+	grpcClient "github.com/Resolyte-official/service-governance/pkg/client/grpc"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/twilio"
@@ -19,13 +21,15 @@ type governanceService struct {
 	envConfig    *config.Configuration
 	svcStore     *ServiceStore
 	twilioClient twilio.TwilioClient
+	mdGrpcClient grpcClient.MetadataClient
 }
 
-func NewService(envConfig *config.Configuration, svcStore *ServiceStore, twC twilio.TwilioClient) Service {
+func NewService(envConfig *config.Configuration, svcStore *ServiceStore, twC twilio.TwilioClient, mdc grpcClient.MetadataClient) Service {
 	return &governanceService{
 		envConfig:    envConfig,
 		svcStore:     svcStore,
 		twilioClient: twC,
+		mdGrpcClient: mdc,
 	}
 }
 
@@ -191,6 +195,34 @@ func (s *governanceService) Refresh(ctx context.Context, curTokenRefresh string,
 	}
 
 	return tokenAccess, tokenRefresh, &mdata, http.StatusOK, nil
+}
+
+func (s *governanceService) DelegateAccess(ctx context.Context, parentID, guardianPhone string, studentIDs []string) (int, string, error) {
+	resp, err := s.mdGrpcClient.DelegateAccess(
+		ctx,
+		&gen_proto.DelegateAccessRequest{
+			ParentId:      parentID,
+			GuardianPhone: guardianPhone,
+			StudentIds:    studentIDs,
+		})
+	if err != nil {
+		return 0, "", errors.ErrInternalServer.WithInternalErr(err)
+	}
+	return int(resp.Status), resp.Err, nil
+}
+
+func (s *governanceService) RevokeAccess(ctx context.Context, parentID, guardianID string, studentIDs []string) (int, string, error) {
+	resp, err := s.mdGrpcClient.RevokeAccess(
+		ctx,
+		&gen_proto.RevokeAccessRequest{
+			ParentId:   parentID,
+			GuardianId: guardianID,
+			StudentIds: studentIDs,
+		})
+	if err != nil {
+		return 0, "", errors.ErrInternalServer.WithInternalErr(err)
+	}
+	return int(resp.Status), resp.Err, nil
 }
 
 func (s *governanceService) Authenticate(ctx context.Context, token string) (jwt.MapClaims, int, error) {

@@ -12,14 +12,15 @@ import (
 )
 
 type MongoConfiguration struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
+	// Host     string
+	// Port     string
+	Username         string
+	Password         string
+	ConnectionString string
 }
 
 func CreateMongoURI(config *MongoConfiguration) string {
-	return fmt.Sprintf("mongodb://%s:%s@%s:%s/", config.Username, config.Password, config.Host, config.Port)
+	return fmt.Sprintf("mongodb+srv://%s:%s@%s", config.Username, config.Password, config.ConnectionString)
 }
 
 type MongoService struct {

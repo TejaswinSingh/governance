@@ -3,12 +3,12 @@ package transport
 import (
 	"context"
 
+	pb "github.com/Resolyte-official/gen_proto/pkg/governance"
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	"github.com/Resolyte-official/service-governance/pkg/endpoints"
 	myerrors "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/Resolyte-official/service-governance/pkg/logging"
 	"github.com/Resolyte-official/service-governance/pkg/metrics"
-	"github.com/Resolyte-official/service-governance/pkg/pb"
 	grpctransport "github.com/go-kit/kit/transport/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -91,16 +91,18 @@ func (s *governanceService) fetchUserMetaData(ctx context.Context, userID uuid.U
 	}
 
 	if strings.EqualFold(role, string(auth.RoleParent)) {
-		if doc, ot, err := s.fetchParentMetaData(ctx, userDoc); err == nil {
-			return doc, ot, nil
+		doc, ot, err := s.fetchParentMetaData(ctx, userDoc)
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, nil, err
+		return doc, ot, nil
 
 	} else if strings.EqualFold(role, string(auth.RoleGuardian)) {
-		if doc, ot, err := s.fetchGuardianMetaData(ctx, userDoc); err == nil {
-			return doc, ot, nil
+		doc, ot, err := s.fetchGuardianMetaData(ctx, userDoc)
+		if err != nil {
+			return nil, nil, err
 		}
-		return nil, nil, err
+		return doc, ot, nil
 	}
 	return nil, nil, myerrors.ErrMetaData
 }

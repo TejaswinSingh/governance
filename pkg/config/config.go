@@ -17,6 +17,7 @@ type Configuration struct {
 	HttpMode               HttpMode
 	HttpPort               string
 	GrpcPort               string
+	MetadataGrpcAddr       string
 	NamespaceUUID          uuid.UUID
 	SecretKey              []byte
 	CorsOrigins            []string
@@ -34,8 +35,8 @@ const (
 	defaultRedisHost     = "redis"
 	defaultRedisPort     = "6379"
 	defaultRedisDatabase = 0
-	defaultMongoHost     = "mongo"
-	defaultMongoPort     = "27017"
+	// defaultMongoHost     = "mongo"
+	// defaultMongoPort     = "27017"
 )
 
 // NewEnvironmentConfiguration creates a configuration populated from os environment variables.
@@ -66,6 +67,7 @@ func NewEnvironmentConfiguration() Configuration {
 		HttpMode:               ValidateHttpMode(httpMode),
 		HttpPort:               envString("GOVERNANCE_HTTP_PORT", defaultHTTPPort),
 		GrpcPort:               envString("GOVERNANCE_GRPC_PORT", defaultGRPCPort),
+		MetadataGrpcAddr:       requireEnv("METADATA_GRPC_ADDR"),
 		NamespaceUUID:          namespaceUUID,
 		SecretKey:              secretKey,
 		CorsOrigins:            parseStringsEnv("CORS_ORIGINS", []string{defaultCORSOrigin}),
@@ -79,10 +81,11 @@ func NewEnvironmentConfiguration() Configuration {
 			Database: redisDB,
 		},
 		Mongo: persist.MongoConfiguration{
-			Host:     envString("MONGO_HOST", defaultMongoHost),
-			Port:     envString("MONGO_PORT", defaultMongoPort),
-			Username: requireEnv("MONGO_GOVERNANCE_USER"),
-			Password: requireEnv("MONGO_GOVERNANCE_PASSWORD"),
+			// Host:     envString("MONGO_HOST", defaultMongoHost),
+			// Port:     envString("MONGO_PORT", defaultMongoPort),
+			Username:         requireEnv("MONGO_GOVERNANCE_USER"),
+			Password:         requireEnv("MONGO_GOVERNANCE_PASSWORD"),
+			ConnectionString: requireEnv("MONGO_CONNECTION_STRING"),
 		},
 	}
 }

@@ -1,5 +1,12 @@
 FROM golang:1.24.2 AS builder
 
+# required for downloading private repos
+RUN --mount=type=secret,id=github_token \
+    GITHUB_TOKEN=$(cat /run/secrets/github_token) && \
+    git config --global url."https://${GITHUB_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
+    echo "GOPRIVATE=github.com/Resolyte-official/*" >> /etc/environment && \
+    echo "GOPROXY=direct" >> /etc/environment
+
 WORKDIR /app
 
 COPY go.mod go.sum ./
