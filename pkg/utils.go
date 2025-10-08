@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/Resolyte-official/service-governance/pkg/auth"
@@ -56,6 +57,10 @@ func (s *governanceService) getUser(ctx context.Context, userID uuid.UUID) (bson
 	if err != nil {
 		return nil, err
 	}
+	// check account status
+	if status, ok := userDoc["account_status"].(string); !ok || !strings.EqualFold(status, "active") {
+		return nil, myerrors.ErrAccessDenied.WithInternalErr(errors.New("user account status is not set to active"))
+	}
 	return userDoc, nil
 }
 
@@ -88,6 +93,11 @@ func (s *governanceService) fetchUserMetaData(ctx context.Context, userID uuid.U
 	role, ok := userDoc["role"].(string)
 	if !ok || role == "" {
 		return nil, nil, myerrors.ErrMissingMetaData
+	}
+
+	// check account status
+	if status, ok := userDoc["account_status"].(string); !ok || !strings.EqualFold(status, "active") {
+		return nil, nil, myerrors.ErrAccessDenied.WithInternalErr(errors.New("user account status is not set to active"))
 	}
 
 	if strings.EqualFold(role, string(auth.RoleParent)) {
@@ -450,6 +460,11 @@ func (s *governanceService) fetchSchoolAdminMetaData(ctx context.Context, userID
 	role, ok := userDoc["role"].(string)
 	if !ok || role == "" || role != string(auth.RoleSchoolAdmin) {
 		return nil, myerrors.ErrMissingMetaData
+	}
+
+	// check account status
+	if status, ok := userDoc["account_status"].(string); !ok || !strings.EqualFold(status, "active") {
+		return nil, myerrors.ErrAccessDenied.WithInternalErr(errors.New("user account status is not set to active"))
 	}
 
 	schoolID, ok := userDoc["school_id"].(string)
