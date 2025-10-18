@@ -13,8 +13,6 @@ paths:
     post:
       summary: Request OTP for login
       security: []
-      parameters:
-        - $ref: '#/components/parameters/RequestIDHeader'
       requestBody:
         required: true
         content:
@@ -51,8 +49,6 @@ paths:
     post:
       summary: User login
       security: []
-      parameters:
-        - $ref: '#/components/parameters/RequestIDHeader'
       requestBody:
         required: true
         content:
@@ -110,8 +106,6 @@ paths:
       security:
         - authCookie: []
           refreshCookie: []
-      parameters:
-        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: Successfully logged out
@@ -149,8 +143,6 @@ paths:
       summary: Refresh tokens
       security:
         - refreshCookie: []
-      parameters:
-        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: issues a new set of tokens and refetches the metadata
@@ -192,8 +184,6 @@ paths:
       summary: School Admin Metadata
       security:
         - authCookie: []
-      parameters:
-        - $ref: '#/components/parameters/RequestIDHeader'
       responses:
         "200":
           description: metadata fetched
@@ -226,12 +216,3 @@ components:
       type: apiKey
       in: cookie
       name: refresh_token
-
-  parameters:
-    RequestIDHeader:
-      name: X-REQUEST-ID
-      in: header
-      required: true
-      description: Unique request identifier in UUID format eg. 'ffffffff-ffff-ffff-ffff-ffffffffffff'
-      schema:
-        type: string
