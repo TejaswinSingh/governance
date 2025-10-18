@@ -1,9 +1,12 @@
 package twilio
 
 import (
+	"errors"
+
 	"github.com/Resolyte-official/service-governance/pkg/config"
 	svcError "github.com/Resolyte-official/service-governance/pkg/errors"
 	"github.com/twilio/twilio-go"
+	"github.com/twilio/twilio-go/client"
 	lookups "github.com/twilio/twilio-go/rest/lookups/v1"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
 )
@@ -59,10 +62,16 @@ func (tc *twilioClient) VerifyOTP(phone, otp string) error {
 
 	resp, err := tc.client.VerifyV2.CreateVerificationCheck(tc.verifyServiceSid, params)
 	if err != nil {
+		var restErr *client.TwilioRestError
+		if errors.As(err, &restErr) {
+			if restErr.Code == 20404 {
+				return svcError.ErrInvalidOTP
+			}
+		}
 		return svcError.ErrServiceUnavailable.WithInternalErr(err)
 	}
 	if resp != nil && resp.Status != nil && *(resp.Status) == "approved" {
 		return nil
 	}
-	return svcError.ErrInvalidOTP
+	return svcError.ErrServiceUnavailable.WithInternalErr(errors.New("twilio REST API error"))
 }
