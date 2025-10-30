@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -79,8 +80,8 @@ func toPBClaims(m jwt.MapClaims) *pb.Claims {
 		Type: getStringClaim(m, "type"),
 		Role: getStringClaim(m, "role"),
 		ParentClaims: &pb.ParentClaims{
-			LinkedStudents:    getStringArrayClaim(m, "linked_students"),
-			DelegatedStudents: getStringArrayClaim(m, "delegated_students"),
+			LinkedStudents:    getStringArrayClaim(m, "parent_claims", "linked_students"),
+			DelegatedStudents: getStringArrayClaim(m, "parent_claims", "delegated_students"),
 		},
 	}
 }
@@ -94,10 +95,22 @@ func getStringClaim(m jwt.MapClaims, key string) string {
 	return ""
 }
 
-func getStringArrayClaim(m jwt.MapClaims, key string) []string {
-	if val, ok := m[key]; ok {
-		if s, ok := val.([]string); ok {
-			return s
+func convertAnyToStringSlice(input []any) []string {
+	var result []string
+	for _, v := range input {
+		result = append(result, fmt.Sprintf("%s", v))
+	}
+	return result
+}
+
+func getStringArrayClaim(m jwt.MapClaims, key, subkey string) []string {
+	if submap, ok := m[key]; ok {
+		if smap, ok := submap.(map[string]any); ok {
+			if val, ok := smap[subkey]; ok {
+				if s, ok := val.([]any); ok {
+					return convertAnyToStringSlice(s)
+				}
+			}
 		}
 	}
 	return nil
